@@ -11,7 +11,7 @@ physics.setGravity(0, 0)
 local box
 local boxSize = {
   width = math.floor(display.contentWidth / 3),
-  height = 40,
+  height = display.contentHeight / 10,
   margin = 1,
 }
 local boxPositionsX = {
@@ -24,9 +24,9 @@ local floorSize = {
   height = 10,
 }
 local maxPositionY = {
-  display.contentHeight - floorSize.height,
-  display.contentHeight - floorSize.height,
-  display.contentHeight - floorSize.height,
+  display.contentHeight,
+  display.contentHeight,
+  display.contentHeight,
 }
 
 
@@ -50,11 +50,15 @@ local function updateBoxPosition(index)
     box.positionIndex = index
     box.x = boxPositionsX[index]
   end
+
+  if (box.positionIndex == nil) then 
+    box.x = -boxSize.width
+  end
 end
 
 
 local function swipeBox(event)
-  if (box.myStatic == true) then
+  if (box.bodyType == "static") then
     return true
   end
 
@@ -71,7 +75,8 @@ local function swipeBox(event)
       elseif (xDiff > 0) then
         updateBoxPosition(box.positionIndex + 1)
       end
-    elseif (yDiff > 30) then
+    elseif (yDiff > 30 and box.myMoveFast == false) then
+      box.myMoveFast = true
       box:setLinearVelocity(0, 500)
     end
   end
@@ -80,28 +85,88 @@ local function swipeBox(event)
 end
 
 
+local function generateTask(description, limit)
+  if (description == "number") then
+    return tostring(math.random(1, limit))
+  elseif (description == "sum right") then
+    local first = math.random(1, limit - 1)
+    local second = math.random(1, limit - first)
+    return tostring(first) .. " + " .. tostring(second) .. " = ?"
+  elseif (description == "sum left") then
+    local first = math.random(1, limit - 1)
+    local sum = math.random(first + 1, limit)
+    return tostring(first) .. " + ? = " .. tostring(sum)  
+  end
+  return "?"
+end
+
+
+local function isSolved(value1, value2)
+  local questionIndex1 = string.find(value1, '?')
+  local questionIndex2 = string.find(value2, '?')
+
+  if ((questionIndex1 and questionIndex2) or (questionIndex1 == nil and questionIndex2 == nil)) then
+    return false
+  end
+
+  local task = questionIndex1 and value1 or value2
+  local answer = questionIndex2 and value1 or value2
+  local questionIndex = questionIndex1 or questionIndex2
+
+  local solution = string.sub(task, 1, questionIndex - 1) .. answer .. string.sub(task, questionIndex + 1)
+  local equalIndex = string.find(solution, '=')
+  solution = string.sub(solution, 1, equalIndex - 1) .. "==" .. string.sub(solution, equalIndex + 1)
+  local solved = loadstring("return " .. solution)
+  return solved()
+end
+
+
 local function createNewBox()
-  local startY = boxSize.margin + boxSize.height / 2
-  box = display.newRect(mainGroup, 0, startY, boxSize.width, boxSize.height)
+  box = display.newGroup()
+  box.y = -boxSize.height * 0.7
+  mainGroup:insert(box)
+
+  local taskTypes = {"number", "sum right", "sum left", "number"}
+
+  local task = generateTask(taskTypes[math.random(1, #taskTypes)], 10)
+  local shape = display.newRect(box, 0, 0, boxSize.width, boxSize.height)
+  shape:setFillColor(174 / 255, 227 / 255, 250 / 255)
+  local text = display.newText(box, task, 0, 0, native.systemFont, 15)
+  text:setFillColor(0, 0, 0)
+
   updateBoxPosition(math.random(1, #boxPositionsX))
 
-  physics.addBody(box, "dynamic", {
-    bounce = 0,
-  })
+  physics.addBody(box, "dynamic", {bounce = 0})
 
   box.isBullet = true
   box.myName = "box"
-  box.myStatic = false
+  box.myValue = task
+  box.myMoveFast = false
   box:setLinearVelocity(0, 50)
 
   function box:collision(event)
-    box.isBullet = false
-    box.myStatic = true
-    box.bodyType = "static"
-    box:removeEventListener("collision")
-    box:setLinearVelocity(0, 0)
-    maxPositionY[box.positionIndex] = boxUpperY()
-    timer.performWithDelay(500, createNewBox)
+    local upperY = boxUpperY()
+    local other = event.other
+
+    if (upperY > -boxSize.height * 0.1) then
+      box:setLinearVelocity(0, 0)
+      box.isBullet = false
+      box.bodyType = "static"
+      box:removeEventListener("collision")
+      maxPositionY[box.positionIndex] = upperY
+      
+      if (other.myName == "box") then
+        if (isSolved(box.myValue, other.myValue)) then
+          display.remove(box)
+          display.remove(other)
+        end
+      end
+
+      timer.performWithDelay(300, createNewBox)
+    else
+      print("game over")
+      physics.pause()
+    end
   end
 
   box:addEventListener("collision")
@@ -112,7 +177,7 @@ local function createFloor()
   local floor = display.newRect(
     mainGroup, 
     display.contentCenterX, 
-    display.contentHeight - floorSize.height, 
+    display.contentHeight + floorSize.height, 
     floorSize.width, 
     floorSize.height
   )
