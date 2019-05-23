@@ -26,8 +26,9 @@ local floorSize = {
 local maxPositionY = {
   display.contentHeight,
   display.contentHeight,
-  display.contentHeight,
+  display.contentHeight
 }
+local lastTasks = {nil, nil, nil}
 
 
 local function boxUpperY() 
@@ -46,6 +47,7 @@ local function updateBoxPosition(index)
     index = #boxPositionsX
   end
 
+  print(boxLowerY(), maxPositionY[index])
   if (boxLowerY() < maxPositionY[index]) then 
     box.positionIndex = index
     box.x = boxPositionsX[index]
@@ -85,39 +87,163 @@ local function swipeBox(event)
 end
 
 
-local function generateTask(description, limit)
-  if (description == "number") then
-    return tostring(math.random(1, limit))
-  elseif (description == "sum right") then
-    local first = math.random(1, limit - 1)
-    local second = math.random(1, limit - first)
-    return tostring(first) .. " + " .. tostring(second) .. " = ?"
-  elseif (description == "sum left") then
-    local first = math.random(1, limit - 1)
-    local sum = math.random(first + 1, limit)
-    return tostring(first) .. " + ? = " .. tostring(sum)  
+local function findValidAnswersForLastTasks() 
+  local answers = {}
+  for i = #lastTasks, 1, -1 do
+    local task = lastTasks[i]
+    if (task and task.type ~= "number") then
+      table.insert(answers, task.answer)
+    end
   end
-  return "?"
+  return answers
 end
 
 
-local function isSolved(value1, value2)
-  local questionIndex1 = string.find(value1, '?')
-  local questionIndex2 = string.find(value2, '?')
-
-  if ((questionIndex1 and questionIndex2) or (questionIndex1 == nil and questionIndex2 == nil)) then
-    return false
+local function findInvalidAnswersForLastTasks(limit)
+  local answers = {}
+  for i = 1, limit do
+    table.insert(answers, i)
   end
 
-  local task = questionIndex1 and value1 or value2
-  local answer = questionIndex2 and value1 or value2
-  local questionIndex = questionIndex1 or questionIndex2
+  for i = #lastTasks, 1, -1 do
+    local task = lastTasks[i]
+    if (task and task.type ~= "number") then
+      table.remove(answers, task.answer)
+    end
+  end
+  return answers
+end
 
-  local solution = string.sub(task, 1, questionIndex - 1) .. answer .. string.sub(task, questionIndex + 1)
-  local equalIndex = string.find(solution, '=')
-  solution = string.sub(solution, 1, equalIndex - 1) .. "==" .. string.sub(solution, equalIndex + 1)
-  local solved = loadstring("return " .. solution)
-  return solved()
+
+local function findValidNumbersForLastTasks() 
+  local numbers = {}
+  for i = #lastTasks, 1, -1 do
+    local task = lastTasks[i]
+    if (task and task.type == "number") then
+      table.insert(numbers, task.answer)
+    end
+  end
+  return numbers
+end
+
+
+local function findInvalidNumbersForLastTasks(limit)
+  local answers = {}
+  for i = 1, limit do
+    table.insert(answers, i)
+  end
+
+  for i = #lastTasks, 1, -1 do
+    local task = lastTasks[i]
+    if (task and task.type == "number") then
+      table.remove(answers, task.answer)
+    end
+  end
+  return answers
+end
+
+
+local function generateTask(type, range, limit) 
+  print(#range, type)
+  
+  if (type == "number") then
+    local number = range[math.random(1, #range)]
+    return {
+      type = type, 
+      value = tostring(number),
+      answer = number,
+    }
+  elseif (type == "sum right") then
+    if (#range == 1 and range[1] == 1) then
+      return generateTask("sum left", range, limit)
+    end
+
+    local answer = range[math.random(2, #range)]
+
+    local pairs = {}
+    for i = 1, answer - 1 do
+      table.insert(pairs, {i, answer - i})
+    end
+    local firstAndSecond = pairs[math.random(1, #pairs)]
+
+    return {
+      type = type,
+      value = tostring(firstAndSecond[1]) .. " + " .. tostring(firstAndSecond[2]) .. " = ?",
+      answer = answer,
+    }
+  elseif (type == "sum left") then
+    local maxIndex = #range
+    if (range[maxIndex] == limit) then
+      maxIndex = maxIndex - 1
+    end
+
+    local answer = range[math.random(1, maxIndex)]
+
+    local pairs = {}
+    for i = 1, limit - answer do
+      table.insert(pairs, {i, answer + i})
+    end
+    local firstAndSum = pairs[math.random(1, #pairs)]
+
+    return {
+      type = type,
+      value = tostring(firstAndSum[1]) .. " + ? = " .. tostring(firstAndSum[2]),
+      answer = answer,
+    }
+  else
+    return {
+      type = type,
+      value = "?",
+      answer = 0,
+    }
+  end
+end
+
+
+local function generateRandomTask(types, limit)
+  local tasks = {}
+
+  local validAnswers = findValidAnswersForLastTasks()
+  if (#validAnswers > 0) then
+    local task = generateTask("number", validAnswers, limit)
+    table.insert(tasks, task)
+  end
+
+  local invalidAnswers = findInvalidAnswersForLastTasks(limit)
+  if (#invalidAnswers > 0) then
+    local task = generateTask("number", invalidAnswers, limit)
+    table.insert(tasks, task)
+  end
+
+  local validTaskType = types[math.random(1, #types)]
+  local validNumbers = findValidNumbersForLastTasks()
+  if (#validNumbers > 0) then
+    local task = generateTask(validTaskType, validNumbers, limit)
+    table.insert(tasks, task)
+  end
+
+  local invalidTaskType = types[math.random(1, #types)]
+  local invalidNumbers = findInvalidNumbersForLastTasks(limit)
+  if (#invalidNumbers > 0) then
+    local task = generateTask(invalidTaskType, invalidNumbers, limit)
+    table.insert(tasks, task)
+  end
+  
+  return tasks[math.random(1, #tasks)]
+end
+
+
+local function isSolved(task1, task2)
+  if (task1.type == task2.type) then
+    return false
+  elseif ((task1.type == "number" and task2.type ~= "number") or
+          (task2.type == "number" and task1.type ~= "number"))
+  then
+    print(task1.answer, task2.answer)
+    return task1.answer == task2.answer
+  else
+    return false
+  end
 end
 
 
@@ -126,12 +252,10 @@ local function createNewBox()
   box.y = -boxSize.height * 0.7
   mainGroup:insert(box)
 
-  local taskTypes = {"number", "sum right", "sum left", "number"}
-
-  local task = generateTask(taskTypes[math.random(1, #taskTypes)], 10)
+  local task = generateRandomTask({"sum right", "sum left"}, 10)
   local shape = display.newRect(box, 0, 0, boxSize.width, boxSize.height)
   shape:setFillColor(174 / 255, 227 / 255, 250 / 255)
-  local text = display.newText(box, task, 0, 0, native.systemFont, 15)
+  local text = display.newText(box, task.value, 0, 0, native.systemFont, 15)
   text:setFillColor(0, 0, 0)
 
   updateBoxPosition(math.random(1, #boxPositionsX))
@@ -140,7 +264,7 @@ local function createNewBox()
 
   box.isBullet = true
   box.myName = "box"
-  box.myValue = task
+  box.myTask = task
   box.myMoveFast = false
   box:setLinearVelocity(0, 50)
 
@@ -156,9 +280,11 @@ local function createNewBox()
       maxPositionY[box.positionIndex] = upperY
       
       if (other.myName == "box") then
-        if (isSolved(box.myValue, other.myValue)) then
+        if (isSolved(box.myTask, other.myTask)) then
           display.remove(box)
           display.remove(other)
+        else
+          lastTasks[box.positionIndex] = box.myTask
         end
       end
 
