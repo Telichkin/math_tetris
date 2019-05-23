@@ -11,13 +11,17 @@ physics.setGravity(0, 0)
 local box
 local boxSize = {
   width = math.floor(display.contentWidth / 3),
-  height = display.contentHeight / 10,
-  margin = 1,
+  height = 48,
+  marginY = 6,
+  marginX = 4,
+  radius = 10,
 }
+boxSize.width = boxSize.width - 2 * boxSize.marginY
+
 local boxPositionsX = {
-  boxSize.margin + boxSize.width * 0.5,
-  boxSize.margin * 2 + boxSize.width * 1.5,
-  boxSize.margin * 3 + boxSize.width * 2.5,
+  display.contentCenterX - (boxSize.marginY + boxSize.width),
+  display.contentCenterX,
+  display.contentCenterX + (boxSize.marginY + boxSize.width),
 }
 local floorSize = {
   width = display.contentWidth,
@@ -28,7 +32,12 @@ local maxPositionY = {
   display.contentHeight,
   display.contentHeight
 }
-local lastTasks = {nil, nil, nil}
+local lastTasks = {{}, {}, {}}
+
+
+local function rgb(r, g, b, o)
+  return {r / 255, g / 255, b / 255, o or 1}
+end
 
 
 local function boxUpperY() 
@@ -79,7 +88,7 @@ local function swipeBox(event)
       end
     elseif (yDiff > 30 and box.myMoveFast == false) then
       box.myMoveFast = true
-      box:setLinearVelocity(0, 500)
+      box:setLinearVelocity(0, 600)
     end
   end
   
@@ -90,7 +99,7 @@ end
 local function findValidAnswersForLastTasks() 
   local answers = {}
   for i = #lastTasks, 1, -1 do
-    local task = lastTasks[i]
+    local task = lastTasks[i][#lastTasks[i]]
     if (task and task.type ~= "number") then
       table.insert(answers, task.answer)
     end
@@ -106,7 +115,7 @@ local function findInvalidAnswersForLastTasks(limit)
   end
 
   for i = #lastTasks, 1, -1 do
-    local task = lastTasks[i]
+    local task = lastTasks[i][#lastTasks[i]]
     if (task and task.type ~= "number") then
       table.remove(answers, task.answer)
     end
@@ -118,7 +127,7 @@ end
 local function findValidNumbersForLastTasks() 
   local numbers = {}
   for i = #lastTasks, 1, -1 do
-    local task = lastTasks[i]
+    local task = lastTasks[i][#lastTasks[i]]
     if (task and task.type == "number") then
       table.insert(numbers, task.answer)
     end
@@ -134,7 +143,7 @@ local function findInvalidNumbersForLastTasks(limit)
   end
 
   for i = #lastTasks, 1, -1 do
-    local task = lastTasks[i]
+    local task = lastTasks[i][#lastTasks[i]]
     if (task and task.type == "number") then
       table.remove(answers, task.answer)
     end
@@ -144,10 +153,8 @@ end
 
 
 local function generateTask(type, range, limit) 
-  print(#range, type)
-  
   if (type == "number") then
-    local number = range[math.random(1, #range)]
+    local number = range[math.random(#range)]
     return {
       type = type, 
       value = tostring(number),
@@ -158,9 +165,17 @@ local function generateTask(type, range, limit)
       return generateTask("sum left", range, limit)
     end
 
-    local answer = range[math.random(2, #range)]
+    local answer
+    if (#range == 1) then
+      answer = range[1]
+    else
+      answer = range[math.random(2, #range)]
+    end
 
     local pairs = {}
+    if (answer == 2) then 
+      table.insert(pairs, {1, answer - 1})
+    end
     for i = 1, answer - 1 do
       table.insert(pairs, {i, answer - i})
     end
@@ -175,6 +190,10 @@ local function generateTask(type, range, limit)
     local maxIndex = #range
     if (range[maxIndex] == limit) then
       maxIndex = maxIndex - 1
+    end
+
+    if (maxIndex == 0) then
+      return generateTask("sum right", range, limit)
     end
 
     local answer = range[math.random(1, maxIndex)]
@@ -201,35 +220,38 @@ end
 
 
 local function generateRandomTask(types, limit)
-  local tasks = {}
-
   local validAnswers = findValidAnswersForLastTasks()
-  if (#validAnswers > 0) then
-    local task = generateTask("number", validAnswers, limit)
-    table.insert(tasks, task)
-  end
-
   local invalidAnswers = findInvalidAnswersForLastTasks(limit)
-  if (#invalidAnswers > 0) then
-    local task = generateTask("number", invalidAnswers, limit)
-    table.insert(tasks, task)
-  end
-
-  local validTaskType = types[math.random(1, #types)]
   local validNumbers = findValidNumbersForLastTasks()
-  if (#validNumbers > 0) then
-    local task = generateTask(validTaskType, validNumbers, limit)
-    table.insert(tasks, task)
-  end
-
-  local invalidTaskType = types[math.random(1, #types)]
   local invalidNumbers = findInvalidNumbersForLastTasks(limit)
-  if (#invalidNumbers > 0) then
-    local task = generateTask(invalidTaskType, invalidNumbers, limit)
-    table.insert(tasks, task)
+  local taskType = types[math.random(#types)]
+
+  local shouldBeValid = (math.random() > 0.6) and (#validAnswers > 0 or #validNumbers > 0)
+  if (shouldBeValid) then
+    if (#validAnswers == 0 and #validNumbers > 0) then
+      return generateTask(taskType, validNumbers, limit)
+    elseif (#validNumbers == 0 and #validAnswers > 0) then
+      return generateTask("number", validAnswers, limit)
+    else
+      if (math.random() > 0.5) then
+        return generateTask(taskType, validNumbers, limit)
+      else
+        return generateTask("number", validAnswers, limit)
+      end
+    end
+  else
+    if (#invalidAnswers == 0 and #invalidNumbers > 0) then
+      return generateTask(taskType, invalidNumbers, limit)
+    elseif (#invalidNumbers == 0 and #invalidAnswers > 0) then
+      return generateTask("number", invalidAnswers, limit)
+    else
+      if (math.random() > 0.5) then
+        return generateTask(taskType, invalidNumbers, limit)
+      else
+        return generateTask("number", invalidAnswers, limit)
+      end
+    end
   end
-  
-  return tasks[math.random(1, #tasks)]
 end
 
 
@@ -239,7 +261,6 @@ local function isSolved(task1, task2)
   elseif ((task1.type == "number" and task2.type ~= "number") or
           (task2.type == "number" and task1.type ~= "number"))
   then
-    print(task1.answer, task2.answer)
     return task1.answer == task2.answer
   else
     return false
@@ -252,11 +273,14 @@ local function createNewBox()
   box.y = -boxSize.height * 0.7
   mainGroup:insert(box)
 
-  local task = generateRandomTask({"sum right", "sum left"}, 10)
-  local shape = display.newRect(box, 0, 0, boxSize.width, boxSize.height)
-  shape:setFillColor(174 / 255, 227 / 255, 250 / 255)
-  local text = display.newText(box, task.value, 0, 0, native.systemFont, 15)
-  text:setFillColor(0, 0, 0)
+  local task = generateRandomTask({"sum right", "sum left"}, 100)
+  local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
+  shape:setFillColor(unpack(rgb(180, 193, 58)))
+  local marginShape = display.newRect(box, 0, 0, boxSize.width, boxSize.height + boxSize.marginX)
+  marginShape:setFillColor(0, 0, 0, 0)
+
+  local text = display.newText(box, task.value, 0, 0, "Helvetica", 15)
+  text:setFillColor(1, 1, 1)
 
   updateBoxPosition(math.random(1, #boxPositionsX))
 
@@ -266,7 +290,7 @@ local function createNewBox()
   box.myName = "box"
   box.myTask = task
   box.myMoveFast = false
-  box:setLinearVelocity(0, 50)
+  box:setLinearVelocity(0, 30)
 
   function box:collision(event)
     local upperY = boxUpperY()
@@ -283,9 +307,12 @@ local function createNewBox()
         if (isSolved(box.myTask, other.myTask)) then
           display.remove(box)
           display.remove(other)
+          table.remove(lastTasks[other.positionIndex], #lastTasks[other.positionIndex])
         else
-          lastTasks[box.positionIndex] = box.myTask
+          table.insert(lastTasks[box.positionIndex], box.myTask)
         end
+      else
+        table.insert(lastTasks[box.positionIndex], box.myTask)
       end
 
       timer.performWithDelay(300, createNewBox)
@@ -303,10 +330,38 @@ local function createFloor()
   local floor = display.newRect(
     mainGroup, 
     display.contentCenterX, 
-    display.contentHeight + floorSize.height, 
+    display.contentHeight + floorSize.height / 2, 
     floorSize.width, 
     floorSize.height
   )
+  floor:setFillColor(0, 0, 0, 0)
+  
+  local leftLine = display.newRect(
+    mainGroup,
+    boxPositionsX[1],
+    display.contentCenterY,
+    boxSize.width,
+    display.contentHeight
+  )
+  leftLine:setFillColor(unpack(rgb(214, 215, 210, 0.51)))
+
+  local centerLine = display.newRect(
+    mainGroup,
+    boxPositionsX[2],
+    display.contentCenterY,
+    boxSize.width,
+    display.contentHeight
+  )
+  centerLine:setFillColor(unpack(rgb(214, 215, 210, 0.51)))
+
+  local rightLine = display.newRect(
+    mainGroup,
+    boxPositionsX[3],
+    display.contentCenterY,
+    boxSize.width,
+    display.contentHeight
+  )
+  rightLine:setFillColor(unpack(rgb(214, 215, 210, 0.51)))
 
   physics.addBody(floor, "static", {
     bounce = 0,
@@ -321,6 +376,8 @@ function scene:create(event)
   physics.pause()
 
   mainGroup = display.newGroup()
+  local background = display.newRect(mainGroup, display.contentCenterX, display.contentCenterY, display.contentWidth, display.contentHeight)
+  background:setFillColor(unpack(rgb(238, 230, 219)))
   sceneGroup:insert(mainGroup)
 
   createFloor()
