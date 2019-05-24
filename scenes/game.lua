@@ -3,26 +3,34 @@ local physics = require("physics")
 
 
 local scene = composer.newScene()
+local gameGroup
+local mainGroup
 
 physics.start()
 physics.setGravity(0, 0)
 
 
 local box
+local numberOfBoxes = 3
 local boxSize = {
-  width = math.floor(display.contentWidth / 3),
-  height = 48,
+  width = display.contentWidth * 0.92 / numberOfBoxes,
+  height = display.contentWidth / (numberOfBoxes * 2) - 5,
   marginY = 6,
   marginX = 4,
   radius = 10,
 }
-boxSize.width = boxSize.width - 2 * boxSize.marginY
+boxSize.width = boxSize.width - 2 * boxSize.marginX
 
-local boxPositionsX = {
-  display.contentCenterX - (boxSize.marginY + boxSize.width),
-  display.contentCenterX,
-  display.contentCenterX + (boxSize.marginY + boxSize.width),
-}
+
+local function getBoxX(n) 
+  local xList = {
+    - (boxSize.marginX * 1.5 + boxSize.width),
+    0,
+      (boxSize.marginX * 1.5 + boxSize.width),
+  }
+  return xList[n]
+end
+
 local floorSize = {
   width = display.contentWidth,
   height = 10,
@@ -40,26 +48,25 @@ local function rgb(r, g, b, o)
 end
 
 
-local function boxUpperY() 
-  return  box.y - boxSize.height / 2
+local function boxUpperY(aBox) 
+  return aBox.y - boxSize.height / 2
 end
 
-local function boxLowerY()
-  return box.y + boxSize.height / 2
+local function boxLowerY(aBox)
+  return aBox.y + boxSize.height / 2
 end
 
 
 local function updateBoxPosition(index) 
   if (index < 1) then
     index = 1
-  elseif (index > #boxPositionsX) then
-    index = #boxPositionsX
+  elseif (index > numberOfBoxes) then
+    index = numberOfBoxes
   end
 
-  print(boxLowerY(), maxPositionY[index])
-  if (boxLowerY() < maxPositionY[index]) then 
+  if (boxLowerY(box) < maxPositionY[index]) then 
     box.positionIndex = index
-    box.x = boxPositionsX[index]
+    box.x = getBoxX(index)
   end
 
   if (box.positionIndex == nil) then 
@@ -69,7 +76,7 @@ end
 
 
 local function swipeBox(event)
-  if (box.bodyType == "static") then
+  if (box == nil) then
     return true
   end
 
@@ -226,7 +233,7 @@ local function generateRandomTask(types, limit)
   local invalidNumbers = findInvalidNumbersForLastTasks(limit)
   local taskType = types[math.random(#types)]
 
-  local shouldBeValid = (math.random() > 0.6) and (#validAnswers > 0 or #validNumbers > 0)
+  local shouldBeValid = (math.random() > 0.54) and (#validAnswers > 0 or #validNumbers > 0)
   if (shouldBeValid) then
     if (#validAnswers == 0 and #validNumbers > 0) then
       return generateTask(taskType, validNumbers, limit)
@@ -268,21 +275,31 @@ local function isSolved(task1, task2)
 end
 
 
+local function createBackground()
+  local background = display.newRect(mainGroup, display.contentCenterX, display.contentCenterY, display.contentWidth, display.contentHeight)
+  background:setFillColor(unpack(rgb(243, 230, 219)))
+end
+
+
 local function createNewBox()
   box = display.newGroup()
-  box.y = -boxSize.height * 0.7
-  mainGroup:insert(box)
+  box.y = - (gameGroup.height / 2 + boxSize.height * 0.7)
+  gameGroup:insert(box)
 
   local task = generateRandomTask({"sum right", "sum left"}, 100)
   local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
-  shape:setFillColor(unpack(rgb(180, 193, 58)))
+  if (task.type == "number") then
+    shape:setFillColor(unpack(rgb(242, 177, 120)))
+  else
+    shape:setFillColor(unpack(rgb(254, 218, 65)))
+  end
   local marginShape = display.newRect(box, 0, 0, boxSize.width, boxSize.height + boxSize.marginX)
   marginShape:setFillColor(0, 0, 0, 0)
 
-  local text = display.newText(box, task.value, 0, 0, "Helvetica", 15)
+  local text = display.newText(box, task.value, 0, 0, "assets/Roboto-Black", 15)
   text:setFillColor(1, 1, 1)
 
-  updateBoxPosition(math.random(1, #boxPositionsX))
+  updateBoxPosition(math.random(numberOfBoxes))
 
   physics.addBody(box, "dynamic", {bounce = 0})
 
@@ -293,26 +310,29 @@ local function createNewBox()
   box:setLinearVelocity(0, 30)
 
   function box:collision(event)
-    local upperY = boxUpperY()
+    local upperY = boxUpperY(box)
     local other = event.other
+    local this = box
+    box = nil
 
-    if (upperY > -boxSize.height * 0.1) then
-      box:setLinearVelocity(0, 0)
-      box.isBullet = false
-      box.bodyType = "static"
-      box:removeEventListener("collision")
-      maxPositionY[box.positionIndex] = upperY
+    if (upperY > - (gameGroup.height / 2 - boxSize.height * 0.1)) then
+      this:setLinearVelocity(0, 0)
+      this.isBullet = false
+      this.bodyType = "static"
+      this:removeEventListener("collision")
+      maxPositionY[this.positionIndex] = upperY
       
       if (other.myName == "box") then
-        if (isSolved(box.myTask, other.myTask)) then
-          display.remove(box)
+        if (isSolved(this.myTask, other.myTask)) then
+          display.remove(this)
           display.remove(other)
           table.remove(lastTasks[other.positionIndex], #lastTasks[other.positionIndex])
+          maxPositionY[this.positionIndex] = boxLowerY(other)
         else
-          table.insert(lastTasks[box.positionIndex], box.myTask)
+          table.insert(lastTasks[this.positionIndex], this.myTask)
         end
       else
-        table.insert(lastTasks[box.positionIndex], box.myTask)
+        table.insert(lastTasks[this.positionIndex], this.myTask)
       end
 
       timer.performWithDelay(300, createNewBox)
@@ -328,45 +348,24 @@ end
 
 local function createFloor()
   local floor = display.newRect(
-    mainGroup, 
-    display.contentCenterX, 
-    display.contentHeight + floorSize.height / 2, 
-    floorSize.width, 
+    gameGroup, 
+    0, 
+    gameGroup.height / 2 + floorSize.height / 2 - boxSize.marginY / 2, 
+    floorSize.width,
     floorSize.height
   )
   floor:setFillColor(0, 0, 0, 0)
-  
-  local leftLine = display.newRect(
-    mainGroup,
-    boxPositionsX[1],
-    display.contentCenterY,
-    boxSize.width,
-    display.contentHeight
-  )
-  leftLine:setFillColor(unpack(rgb(214, 215, 210, 0.51)))
-
-  local centerLine = display.newRect(
-    mainGroup,
-    boxPositionsX[2],
-    display.contentCenterY,
-    boxSize.width,
-    display.contentHeight
-  )
-  centerLine:setFillColor(unpack(rgb(214, 215, 210, 0.51)))
-
-  local rightLine = display.newRect(
-    mainGroup,
-    boxPositionsX[3],
-    display.contentCenterY,
-    boxSize.width,
-    display.contentHeight
-  )
-  rightLine:setFillColor(unpack(rgb(214, 215, 210, 0.51)))
 
   physics.addBody(floor, "static", {
     bounce = 0,
   })
   floor.myName = "floor"
+end
+
+
+local function createGameBackground()
+  local background = display.newRoundedRect(gameGroup, 0, 0, gameGroup.width, gameGroup.height, 10)
+  background:setFillColor(1, 1, 1)
 end
 
 
@@ -376,10 +375,16 @@ function scene:create(event)
   physics.pause()
 
   mainGroup = display.newGroup()
-  local background = display.newRect(mainGroup, display.contentCenterX, display.contentCenterY, display.contentWidth, display.contentHeight)
-  background:setFillColor(unpack(rgb(238, 230, 219)))
   sceneGroup:insert(mainGroup)
+  
+  createBackground()
 
+  gameGroup = display.newContainer(display.contentWidth * 0.92, display.contentWidth)
+  gameGroup.x = display.contentCenterX
+  gameGroup.y = display.contentCenterY
+  sceneGroup:insert(gameGroup)
+
+  createGameBackground()
   createFloor()
   createNewBox()
 end
