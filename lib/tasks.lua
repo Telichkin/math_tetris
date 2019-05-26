@@ -2,16 +2,6 @@ local M = {}
 local create = {}
 
 
-function create.number(range, limit)
-  local number = range[math.random(#range)]
-  return {
-    type = "number", 
-    value = tostring(number),
-    answer = number,
-  }
-end
-
-
 function create.sumRight(range, limit)
   local answer
   if (#range == 1) then
@@ -20,7 +10,6 @@ function create.sumRight(range, limit)
     answer = range[math.random(2, #range)]
   end
 
-  -- Такой пример: 0 + ? = 1 не должен быть сгенерирован
   if answer == 1 then 
     return create.sumLeft(range, limit) 
   end
@@ -68,8 +57,42 @@ function create.sumLeft(range, limit)
 end
 
 
-function M.create(type, range, limit)
+function M.createTask(type, range, limit)
   return create[type](range, limit)
+end
+
+
+function M.createNumber(types, range, limit)
+  local t = {}
+  for index, type in pairs(types) do
+    t[type] = index
+  end
+
+  if t.sumRight ~= nil and t.sumLeft == nil and range[1] == 1 then
+    table.remove(range, 1)
+  elseif t.sumLeft ~= nil and t.sumRight == nil and range[#range] == limit then
+    table.remove(range, #range)
+  end
+
+  local number = range[math.random(#range)]
+  return {
+    type = "number",
+    value = tostring(number),
+    answer = number,
+  }
+end
+
+
+function M.isSolved(task1, task2)
+  if (task1.type == task2.type) then
+    return false
+  elseif ((task1.type == "number" and task2.type ~= "number") or
+          (task2.type == "number" and task1.type ~= "number"))
+  then
+    return task1.answer == task2.answer
+  else
+    return false
+  end
 end
 
 

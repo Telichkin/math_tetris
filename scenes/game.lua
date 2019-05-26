@@ -22,16 +22,11 @@ local boxSize = {
 }
 boxSize.width = boxSize.width - 2 * boxSize.marginX
 
-
-local function getBoxX(n) 
-  local xList = {
-    - (boxSize.marginX * 1.5 + boxSize.width),
-    0,
-      (boxSize.marginX * 1.5 + boxSize.width),
-  }
-  return xList[n]
-end
-
+local boxXPositions = {
+  - (boxSize.marginX * 1.5 + boxSize.width),
+  0,
+    (boxSize.marginX * 1.5 + boxSize.width)
+}
 local floorSize = {
   width = display.contentWidth,
   height = 10,
@@ -67,7 +62,7 @@ local function updateBoxPosition(index)
 
   if (boxLowerY(box) < maxPositionY[index]) then 
     box.positionIndex = index
-    box.x = getBoxX(index)
+    box.x = boxXPositions[index]
   end
 
   if (box.positionIndex == nil) then 
@@ -127,41 +122,28 @@ local function generateRandomTask(types, limit)
   local shouldBeValid = (math.random() > 0.5) and (#answers.valid > 0 or #numbers.valid > 0)
   if shouldBeValid then
     if #answers.valid == 0 and #numbers.valid > 0 then
-      return tasks.create(taskType, numbers.valid, limit)
+      return tasks.createTask(taskType, numbers.valid, limit)
     elseif #numbers.valid == 0 and #answers.valid > 0 then
-      return tasks.create("number", answers.valid, limit)
+      return tasks.createNumber(types, answers.valid, limit)
     else
       if math.random() > 0.5 then
-        return tasks.create(taskType, numbers.valid, limit)
+        return tasks.createTask(taskType, numbers.valid, limit)
       else
-        return tasks.create("number", answers.valid, limit)
+        return tasks.createNumber(types, answers.valid, limit)
       end
     end
   else
     if #answers.invalid == 0 and #numbers.invalid > 0 then
-      return tasks.create(taskType, numbers.invalid, limit)
+      return tasks.createTask(taskType, numbers.invalid, limit)
     elseif (#numbers.invalid == 0 and #answers.invalid > 0) then
-      return tasks.create("number", answers.invalid, limit)
+      return tasks.createNumber(types, answers.invalid, limit)
     else
       if math.random() > 0.5 then
-        return tasks.create(taskType, numbers.invalid, limit)
+        return tasks.createTask(taskType, numbers.invalid, limit)
       else
-        return tasks.create("number", answers.invalid, limit)
+        return tasks.createNumber(types, answers.invalid, limit)
       end
     end
-  end
-end
-
-
-local function isSolved(task1, task2)
-  if (task1.type == task2.type) then
-    return false
-  elseif ((task1.type == "number" and task2.type ~= "number") or
-          (task2.type == "number" and task1.type ~= "number"))
-  then
-    return task1.answer == task2.answer
-  else
-    return false
   end
 end
 
@@ -177,11 +159,6 @@ local function createNewBox()
   box.y = - (gameGroup.height / 2 + boxSize.height * 0.7)
   gameGroup:insert(box)
 
-  -- Вот эти моменты нужно как-то отлавливать:
-  --  - Если пример типа: a + b = ?, то единица вообще не должна генерироваться
-  --    среди всех чисел
-  --  - Если пример типа: a + ? = b, и все числа не должны быть больше 10,
-  --    то 10 вообще не должна генерироваться среди всех чисел
   local task = generateRandomTask({"sumRight"}, 10)
   local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
   if (task.type == "number") then
@@ -219,7 +196,7 @@ local function createNewBox()
       maxPositionY[this.positionIndex] = upperY
       
       if (other.myName == "box") then
-        if (isSolved(this.myTask, other.myTask)) then
+        if (tasks.isSolved(this.myTask, other.myTask)) then
           display.remove(this)
           display.remove(other)
           table.remove(lastTasks[other.positionIndex], #lastTasks[other.positionIndex])
