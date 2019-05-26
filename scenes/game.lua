@@ -1,5 +1,6 @@
 local composer = require("composer")
 local physics = require("physics")
+local tasks = require("lib.tasks")
 
 
 local scene = composer.newScene()
@@ -103,159 +104,49 @@ local function swipeBox(event)
 end
 
 
-local function findValidAnswersForLastTasks() 
-  local answers = {}
-  for i = #lastTasks, 1, -1 do
+local function findInLastTasks(limit, fn) 
+  local valid, invalid = {}, {}
+  for i = 1, limit do table.insert(invalid, i) end
+
+  for i = 1, #lastTasks do
     local task = lastTasks[i][#lastTasks[i]]
-    if (task and task.type ~= "number") then
-      table.insert(answers, task.answer)
+    if (task and fn(task)) then
+      table.insert(valid, task.answer)
+      table.remove(invalid, task.answer)
     end
   end
-  return answers
-end
-
-
-local function findInvalidAnswersForLastTasks(limit)
-  local answers = {}
-  for i = 1, limit do
-    table.insert(answers, i)
-  end
-
-  for i = #lastTasks, 1, -1 do
-    local task = lastTasks[i][#lastTasks[i]]
-    if (task and task.type ~= "number") then
-      table.remove(answers, task.answer)
-    end
-  end
-  return answers
-end
-
-
-local function findValidNumbersForLastTasks() 
-  local numbers = {}
-  for i = #lastTasks, 1, -1 do
-    local task = lastTasks[i][#lastTasks[i]]
-    if (task and task.type == "number") then
-      table.insert(numbers, task.answer)
-    end
-  end
-  return numbers
-end
-
-
-local function findInvalidNumbersForLastTasks(limit)
-  local answers = {}
-  for i = 1, limit do
-    table.insert(answers, i)
-  end
-
-  for i = #lastTasks, 1, -1 do
-    local task = lastTasks[i][#lastTasks[i]]
-    if (task and task.type == "number") then
-      table.remove(answers, task.answer)
-    end
-  end
-  return answers
-end
-
-
-local function generateTask(type, range, limit) 
-  if (type == "number") then
-    local number = range[math.random(#range)]
-    return {
-      type = type, 
-      value = tostring(number),
-      answer = number,
-    }
-  elseif (type == "sum right") then
-    if (#range == 1 and range[1] == 1) then
-      return generateTask("sum left", range, limit)
-    end
-
-    local answer
-    if (#range == 1) then
-      answer = range[1]
-    else
-      answer = range[math.random(2, #range)]
-    end
-
-    local pairs = {}
-    if (answer == 2) then 
-      table.insert(pairs, {1, answer - 1})
-    end
-    for i = 1, answer - 1 do
-      table.insert(pairs, {i, answer - i})
-    end
-    local firstAndSecond = pairs[math.random(1, #pairs)]
-
-    return {
-      type = type,
-      value = tostring(firstAndSecond[1]) .. " + " .. tostring(firstAndSecond[2]) .. " = ?",
-      answer = answer,
-    }
-  elseif (type == "sum left") then
-    local maxIndex = #range
-    if (range[maxIndex] == limit) then
-      maxIndex = maxIndex - 1
-    end
-
-    if (maxIndex == 0) then
-      return generateTask("sum right", range, limit)
-    end
-
-    local answer = range[math.random(1, maxIndex)]
-
-    local pairs = {}
-    for i = 1, limit - answer do
-      table.insert(pairs, {i, answer + i})
-    end
-    local firstAndSum = pairs[math.random(1, #pairs)]
-
-    return {
-      type = type,
-      value = tostring(firstAndSum[1]) .. " + ? = " .. tostring(firstAndSum[2]),
-      answer = answer,
-    }
-  else
-    return {
-      type = type,
-      value = "?",
-      answer = 0,
-    }
-  end
+  return {valid = valid, invalid = invalid}
 end
 
 
 local function generateRandomTask(types, limit)
-  local validAnswers = findValidAnswersForLastTasks()
-  local invalidAnswers = findInvalidAnswersForLastTasks(limit)
-  local validNumbers = findValidNumbersForLastTasks()
-  local invalidNumbers = findInvalidNumbersForLastTasks(limit)
+  local answers = findInLastTasks(limit, function (task) return task.type ~= "number" end)
+  local numbers = findInLastTasks(limit, function (task) return task.type == "number" end)
   local taskType = types[math.random(#types)]
 
-  local shouldBeValid = (math.random() > 0.54) and (#validAnswers > 0 or #validNumbers > 0)
-  if (shouldBeValid) then
-    if (#validAnswers == 0 and #validNumbers > 0) then
-      return generateTask(taskType, validNumbers, limit)
-    elseif (#validNumbers == 0 and #validAnswers > 0) then
-      return generateTask("number", validAnswers, limit)
+  local shouldBeValid = (math.random() > 0.5) and (#answers.valid > 0 or #numbers.valid > 0)
+  if shouldBeValid then
+    if #answers.valid == 0 and #numbers.valid > 0 then
+      return tasks.create(taskType, numbers.valid, limit)
+    elseif #numbers.valid == 0 and #answers.valid > 0 then
+      return tasks.create("number", answers.valid, limit)
     else
-      if (math.random() > 0.5) then
-        return generateTask(taskType, validNumbers, limit)
+      if math.random() > 0.5 then
+        return tasks.create(taskType, numbers.valid, limit)
       else
-        return generateTask("number", validAnswers, limit)
+        return tasks.create("number", answers.valid, limit)
       end
     end
   else
-    if (#invalidAnswers == 0 and #invalidNumbers > 0) then
-      return generateTask(taskType, invalidNumbers, limit)
-    elseif (#invalidNumbers == 0 and #invalidAnswers > 0) then
-      return generateTask("number", invalidAnswers, limit)
+    if #answers.invalid == 0 and #numbers.invalid > 0 then
+      return tasks.create(taskType, numbers.invalid, limit)
+    elseif (#numbers.invalid == 0 and #answers.invalid > 0) then
+      return tasks.create("number", answers.invalid, limit)
     else
-      if (math.random() > 0.5) then
-        return generateTask(taskType, invalidNumbers, limit)
+      if math.random() > 0.5 then
+        return tasks.create(taskType, numbers.invalid, limit)
       else
-        return generateTask("number", invalidAnswers, limit)
+        return tasks.create("number", answers.invalid, limit)
       end
     end
   end
@@ -286,7 +177,12 @@ local function createNewBox()
   box.y = - (gameGroup.height / 2 + boxSize.height * 0.7)
   gameGroup:insert(box)
 
-  local task = generateRandomTask({"sum right", "sum left"}, 100)
+  -- Вот эти моменты нужно как-то отлавливать:
+  --  - Если пример типа: a + b = ?, то единица вообще не должна генерироваться
+  --    среди всех чисел
+  --  - Если пример типа: a + ? = b, и все числа не должны быть больше 10,
+  --    то 10 вообще не должна генерироваться среди всех чисел
+  local task = generateRandomTask({"sumRight"}, 10)
   local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
   if (task.type == "number") then
     shape:setFillColor(unpack(rgb(242, 177, 120)))
