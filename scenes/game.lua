@@ -1,6 +1,8 @@
 local composer = require("composer")
 local physics = require("physics")
+local widget = require("widget")
 local tasks = require("lib.tasks")
+local utils = require("lib.utils")
 
 
 local scene = composer.newScene()
@@ -39,8 +41,8 @@ local maxPositionY = {
 local lastTasks = {{}, {}, {}}
 
 
-local function rgb(r, g, b, o)
-  return {r / 255, g / 255, b / 255, o or 1}
+local function gotoMenu()
+  composer.gotoScene("scenes.menu")
 end
 
 
@@ -150,7 +152,24 @@ end
 
 local function createBackground()
   local background = display.newRect(mainGroup, display.contentCenterX, display.contentCenterY, display.contentWidth, display.contentHeight)
-  background:setFillColor(unpack(rgb(243, 230, 219)))
+  background:setFillColor(unpack(utils.rgb(243, 230, 219)))
+end
+
+
+local function createGameOverBackground()
+  local background = display.newRoundedRect(gameGroup, 0, 0, gameGroup.width, gameGroup.height, 10)
+  background:setFillColor(unpack(utils.rgb(240, 240, 240, 0.6)))
+
+  local btnGroup = display.newGroup()
+  local btn = display.newRoundedRect(btnGroup, 0, 0, 240, 60, 10)
+  btn:setFillColor(unpack(utils.rgb(145, 145, 145, 1)))
+  local btnText = display.newText(btnGroup, "В меню", 0, 0, "assets/Roboto-Medium", 32)
+  btnText:setFillColor(unpack(utils.rgb(255, 255, 255, 1)))
+  btnGroup.x = 0
+  btnGroup.y = 0
+  gameGroup:insert(btnGroup)
+
+  btnGroup:addEventListener("tap", gotoMenu)
 end
 
 
@@ -159,12 +178,12 @@ local function createNewBox()
   box.y = - (gameGroup.height / 2 + boxSize.height * 0.7)
   gameGroup:insert(box)
 
-  local task = generateRandomTask({"sumRight"}, 10)
+  local task = generateRandomTask({"sumRight", "sumLeft"}, 150)
   local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
   if (task.type == "number") then
-    shape:setFillColor(unpack(rgb(242, 177, 120)))
+    shape:setFillColor(unpack(utils.rgb(242, 177, 120)))
   else
-    shape:setFillColor(unpack(rgb(254, 218, 65)))
+    shape:setFillColor(unpack(utils.rgb(254, 218, 65)))
   end
   local marginShape = display.newRect(box, 0, 0, boxSize.width, boxSize.height + boxSize.marginX)
   marginShape:setFillColor(0, 0, 0, 0)
@@ -210,7 +229,7 @@ local function createNewBox()
 
       timer.performWithDelay(300, createNewBox)
     else
-      print("game over")
+      createGameOverBackground()
       physics.pause()
     end
   end
