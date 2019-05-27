@@ -178,7 +178,7 @@ local function createNewBox()
   box.y = - (gameGroup.height / 2 + boxSize.height * 0.7)
   gameGroup:insert(box)
 
-  local task = generateRandomTask({"sumRight", "sumLeft"}, 150)
+  local task = generateRandomTask({"a + b = ?", "a + ? = b"}, 150)
   local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
   if (task.type == "number") then
     shape:setFillColor(unpack(utils.rgb(242, 177, 120)))
@@ -207,26 +207,26 @@ local function createNewBox()
     local this = box
     box = nil
 
-    if (upperY > - (gameGroup.height / 2 - boxSize.height * 0.1)) then
-      this:setLinearVelocity(0, 0)
-      this.isBullet = false
-      this.bodyType = "static"
-      this:removeEventListener("collision")
-      maxPositionY[this.positionIndex] = upperY
-      
-      if (other.myName == "box") then
-        if (tasks.isSolved(this.myTask, other.myTask)) then
-          display.remove(this)
-          display.remove(other)
-          table.remove(lastTasks[other.positionIndex], #lastTasks[other.positionIndex])
-          maxPositionY[this.positionIndex] = boxLowerY(other)
-        else
-          table.insert(lastTasks[this.positionIndex], this.myTask)
-        end
+    this:setLinearVelocity(0, 0)
+    this.isBullet = false
+    this.bodyType = "static"
+    this:removeEventListener("collision")
+    maxPositionY[this.positionIndex] = upperY
+    
+    if (other.myName == "box") then
+      if (tasks.isSolved(this.myTask, other.myTask)) then
+        display.remove(this)
+        display.remove(other)
+        table.remove(lastTasks[other.positionIndex], #lastTasks[other.positionIndex])
+        maxPositionY[this.positionIndex] = boxLowerY(other)
       else
         table.insert(lastTasks[this.positionIndex], this.myTask)
       end
+    else
+      table.insert(lastTasks[this.positionIndex], this.myTask)
+    end
 
+    if maxPositionY[this.positionIndex] > - (gameGroup.height / 2 - boxSize.height * 0.1) then 
       timer.performWithDelay(300, createNewBox)
     else
       createGameOverBackground()

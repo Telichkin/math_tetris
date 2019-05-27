@@ -2,7 +2,7 @@ local M = {}
 local create = {}
 
 
-function create.sumRight(range, limit)
+create["a + b = ?"] = function (range, limit)
   local answer
   if (#range == 1) then
     answer = range[1]
@@ -24,14 +24,14 @@ function create.sumRight(range, limit)
   local firstAndSecond = pairs[math.random(1, #pairs)]
 
   return {
-    type = "sumRight",
+    type = "a + b = ?",
     value = tostring(firstAndSecond[1]) .. " + " .. tostring(firstAndSecond[2]) .. " = ?",
     answer = answer,
   }
 end
 
 
-function create.sumLeft(range, limit) 
+create["a + ? = b"] = function (range, limit) 
   local maxIndex = #range
   if (range[maxIndex] == limit) then
     maxIndex = maxIndex - 1
@@ -50,10 +50,15 @@ function create.sumLeft(range, limit)
   local firstAndSum = pairs[math.random(1, #pairs)]
 
   return {
-    type = "sumLeft",
+    type = "a + ? = b",
     value = tostring(firstAndSum[1]) .. " + ? = " .. tostring(firstAndSum[2]),
     answer = answer,
   }
+end
+
+
+create["a - b = ?"] = function (range, limit)
+  
 end
 
 
@@ -68,9 +73,10 @@ function M.createNumber(types, range, limit)
     t[type] = index
   end
 
-  if t.sumRight ~= nil and t.sumLeft == nil and range[1] == 1 then
+  -- добавить сюда же a - b = ?, a - ? = b, ? - a = b
+  if t["a + b = ?"] and not t["a + ? = b"] and range[1] == 1 then
     table.remove(range, 1)
-  elseif t.sumLeft ~= nil and t.sumRight == nil and range[#range] == limit then
+  elseif t["a + ? = b"] and not t["a + b = ?"] and range[#range] == limit then
     table.remove(range, #range)
   end
 
