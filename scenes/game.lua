@@ -178,7 +178,7 @@ local function createNewBox()
   box.y = - (gameGroup.height / 2 + boxSize.height * 0.7)
   gameGroup:insert(box)
 
-  local task = generateRandomTask({"a + b = ?", "a + ? = b"}, 150)
+  local task = generateRandomTask({"a - b = ?", "? - a = b", "a - ? = b"}, 5)
   local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
   if (task.type == "number") then
     shape:setFillColor(unpack(utils.rgb(242, 177, 120)))

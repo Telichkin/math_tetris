@@ -4,14 +4,14 @@ local create = {}
 
 create["a + b = ?"] = function (range, limit)
   local answer
-  if (#range == 1) then
+  if #range == 1 then
     answer = range[1]
   else
     answer = range[math.random(2, #range)]
   end
 
   if answer == 1 then 
-    return create.sumLeft(range, limit) 
+    return create["a + ? = b"](range, limit) 
   end
 
   local pairs = {}
@@ -21,7 +21,7 @@ create["a + b = ?"] = function (range, limit)
   for i = 1, answer - 1 do
     table.insert(pairs, {i, answer - i})
   end
-  local firstAndSecond = pairs[math.random(1, #pairs)]
+  local firstAndSecond = pairs[math.random(#pairs)]
 
   return {
     type = "a + b = ?",
@@ -33,21 +33,25 @@ end
 
 create["a + ? = b"] = function (range, limit) 
   local maxIndex = #range
-  if (range[maxIndex] == limit) then
+  if range[maxIndex] == limit then
     maxIndex = maxIndex - 1
   end
 
-  if (maxIndex == 0) then 
-    return create.sumRight(range, limit)
+  if maxIndex == 0 then 
+    return create["a + b = ?"](range, limit)
   end
 
-  local answer = range[math.random(1, maxIndex)]
+  local answer = range[math.random(maxIndex)]
 
   local pairs = {}
-  for i = 1, limit - answer do
-    table.insert(pairs, {i, answer + i})
+  if limit - answer == 1 then
+    table.insert(pairs, {1, answer + 1})
+  else
+    for i = 1, limit - answer do
+      table.insert(pairs, {i, answer + i})
+    end
   end
-  local firstAndSum = pairs[math.random(1, #pairs)]
+  local firstAndSum = pairs[math.random(#pairs)]
 
   return {
     type = "a + ? = b",
@@ -58,7 +62,92 @@ end
 
 
 create["a - b = ?"] = function (range, limit)
-  
+  local maxIndex = #range
+  if range[maxIndex] == limit then
+    maxIndex = maxIndex - 1
+  end
+
+  if maxIndex == 0 then
+    return create["? - a = b"](range, limit)
+  end
+
+  local answer = range[math.random(maxIndex)]
+
+  local pairs = {}
+
+  if limit - answer == 1 then
+    table.insert(pairs, {answer + 1, 1})
+  else
+    for i = 1, limit - answer do
+      table.insert(pairs, {answer + i, i})
+    end
+  end
+  local firstAndSecond = pairs[math.random(#pairs)]
+
+  return {
+    type = "a - b = ?",
+    value = tostring(firstAndSecond[1]) .. " - " .. tostring(firstAndSecond[2]) .. " = ?",
+    answer = answer,
+  }
+end
+
+
+create["? - a = b"] = function (range, limit) 
+  local answer
+  if #range == 1 then
+    answer = range[1]
+  else
+    answer = range[math.random(2, #range)]
+  end
+
+  if answer == 1 then 
+    return create["a - b = ?"](range, limit) 
+  end
+
+  local pairs = {}
+  if (answer == 2) then 
+    table.insert(pairs, {1, 1})
+  end
+  for i = 1, answer - 1 do
+    table.insert(pairs, {answer - i, i})
+  end
+  local secondAndAnswer = pairs[math.random(#pairs)]
+
+  return {
+    type = "? - a = b",
+    value = "? - " .. tostring(secondAndAnswer[1]) .. " = " .. tostring(secondAndAnswer[2]),
+    answer = answer,
+  }
+end
+
+
+create["a - ? = b"] = function (range, limit)
+  local maxIndex = #range
+  if range[maxIndex] == limit then
+    maxIndex = maxIndex - 1
+  end
+
+  if maxIndex == 0 then
+    return create["? - a = b"](range, limit)
+  end
+
+  local answer = range[math.random(maxIndex)]
+
+  local pairs = {}
+  if limit - answer == 1 then
+    table.insert(pairs, {answer + 1, 1})
+  else
+    for i = 1, limit - answer do
+      table.insert(pairs, {answer + i, i})
+    end
+  end
+  local firstAndAnswer = pairs[math.random(#pairs)]
+
+  return {
+    type = "a - ? = b",
+    value = tostring(firstAndAnswer[1]) .. " - ? = " .. tostring(firstAndAnswer[2]),
+    answer = answer,
+  }
 end
 
 
@@ -73,10 +162,12 @@ function M.createNumber(types, range, limit)
     t[type] = index
   end
 
-  -- добавить сюда же a - b = ?, a - ? = b, ? - a = b
-  if t["a + b = ?"] and not t["a + ? = b"] and range[1] == 1 then
+  local maxIsForbidden = t["a + ? = b"] or t["a - b = ?"] or t["a - ? = b"]
+  local oneIsForbidden = t["a + b = ?"] or t["? - a = b"]
+
+  if oneIsForbidden and not maxIsForbidden and range[1] == 1 then
     table.remove(range, 1)
-  elseif t["a + ? = b"] and not t["a + b = ?"] and range[#range] == limit then
+  elseif maxIsForbidden and not oneIsForbidden and range[#range] == limit then
     table.remove(range, #range)
   end
 
