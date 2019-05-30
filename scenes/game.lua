@@ -3,6 +3,7 @@ local physics = require("physics")
 local widget = require("widget")
 local tasks = require("lib.tasks")
 local utils = require("lib.utils")
+local state = require("lib.state")
 
 
 local scene = composer.newScene()
@@ -102,16 +103,25 @@ end
 
 
 local function findInLastTasks(limit, fn) 
-  local valid, invalid = {}, {}
-  for i = 1, limit do table.insert(invalid, i) end
+  local isValidTable = {}
+  for i = 1, limit do table.insert(isValidTable, i, false) end
 
-  for i = 1, #lastTasks do
-    local task = lastTasks[i][#lastTasks[i]]
+  for _, taskList in pairs(lastTasks) do
+    local task = taskList[#taskList]
     if (task and fn(task)) then
-      table.insert(valid, task.answer)
-      table.remove(invalid, task.answer)
+      isValidTable[task.answer] = true
     end
   end
+
+  local valid, invalid = {}, {}
+  for i, isValid in pairs(isValidTable) do
+    if isValid then 
+      table.insert(valid, i)
+    else
+      table.insert(invalid, i)
+    end
+  end
+
   return {valid = valid, invalid = invalid}
 end
 
@@ -173,12 +183,32 @@ local function createGameOverBackground()
 end
 
 
+local function removeValidBoxes(upBox, lowBox)
+  table.remove(lastTasks[lowBox.positionIndex], #lastTasks[lowBox.positionIndex])
+  maxPositionY[upBox.positionIndex] = boxLowerY(lowBox)
+
+  transition.to(upBox, {
+    alpha = 0,
+    time = 200,
+  })
+
+  transition.to(lowBox, {
+    alpha = 0,
+    time = 200,
+    onComplete = function () 
+      display.remove(upBox)
+      display.remove(lowBox)
+    end
+  })
+end
+
+
 local function createNewBox()
   box = display.newGroup()
   box.y = - (gameGroup.height / 2 + boxSize.height * 0.7)
   gameGroup:insert(box)
 
-  local task = generateRandomTask({"a - b = ?", "? - a = b", "a - ? = b"}, 5)
+  local task = generateRandomTask({state.task}, state.limit)
   local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
   if (task.type == "number") then
     shape:setFillColor(unpack(utils.rgb(242, 177, 120)))
@@ -213,19 +243,13 @@ local function createNewBox()
     this:removeEventListener("collision")
     maxPositionY[this.positionIndex] = upperY
     
-    if (other.myName == "box") then
-      if (tasks.isSolved(this.myTask, other.myTask)) then
-        display.remove(this)
-        display.remove(other)
-        table.remove(lastTasks[other.positionIndex], #lastTasks[other.positionIndex])
-        maxPositionY[this.positionIndex] = boxLowerY(other)
-      else
-        table.insert(lastTasks[this.positionIndex], this.myTask)
-      end
+    if tasks.isSolved(this.myTask, other.myTask) then
+      removeValidBoxes(this, other)
     else
       table.insert(lastTasks[this.positionIndex], this.myTask)
     end
 
+    -- Box is outside of the screen
     if maxPositionY[this.positionIndex] > - (gameGroup.height / 2 - boxSize.height * 0.1) then 
       timer.performWithDelay(300, createNewBox)
     else

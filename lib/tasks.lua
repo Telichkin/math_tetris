@@ -181,8 +181,8 @@ end
 
 
 function M.isSolved(task1, task2)
-  if (task1.type == task2.type) then
-    return false
+  if not task1 or not task2 or task1.type == task2.type then
+    return false 
   elseif ((task1.type == "number" and task2.type ~= "number") or
           (task2.type == "number" and task1.type ~= "number"))
   then
