@@ -131,7 +131,7 @@ local function generateRandomTask(types, limit)
   local numbers = findInLastTasks(limit, function (task) return task.type == "number" end)
   local taskType = types[math.random(#types)]
 
-  local shouldBeValid = (math.random() > 0.5) and (#answers.valid > 0 or #numbers.valid > 0)
+  local shouldBeValid = (math.random() > 0.45) and (#answers.valid > 0 or #numbers.valid > 0)
   if shouldBeValid then
     if #answers.valid == 0 and #numbers.valid > 0 then
       return tasks.createTask(taskType, numbers.valid, limit)
@@ -145,16 +145,10 @@ local function generateRandomTask(types, limit)
       end
     end
   else
-    if #answers.invalid == 0 and #numbers.invalid > 0 then
+    if math.random() > 0.5 then
       return tasks.createTask(taskType, numbers.invalid, limit)
-    elseif (#numbers.invalid == 0 and #answers.invalid > 0) then
-      return tasks.createNumber(types, answers.invalid, limit)
     else
-      if math.random() > 0.5 then
-        return tasks.createTask(taskType, numbers.invalid, limit)
-      else
-        return tasks.createNumber(types, answers.invalid, limit)
-      end
+      return tasks.createNumber(types, answers.invalid, limit)
     end
   end
 end
@@ -316,7 +310,20 @@ function scene:show(event)
 end
 
 
+function scene:hide(event) 
+  local sceneGroup = self.view
+  local phase = event.phase
+
+  if (phase == "did") then
+    physics.pause()
+    Runtime:removeEventListener("touch", swipeBox)
+    composer.removeScene("scenes.game")
+  end
+end
+
+
 scene:addEventListener("create")
 scene:addEventListener("show")
+scene:addEventListener("hide")
 
 return scene

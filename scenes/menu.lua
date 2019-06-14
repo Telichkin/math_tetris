@@ -8,12 +8,12 @@ local scene = composer.newScene()
 local buttonsCount = 0
 
 
-local function gotoGame()
-  composer.gotoScene("scenes.game")
+local function gotoSubMenu()
+  composer.gotoScene("scenes.subMenu")
 end
 
 
-local function createMenuBtn(text) 
+local function createLvlBtn(text) 
   local playBtnGroup = display.newGroup()
   local playBtn = display.newRoundedRect(playBtnGroup, 0, 0, 240, 60, 10)
   playBtn:setFillColor(unpack(utils.rgb(145, 145, 145, 1)))
@@ -26,7 +26,7 @@ local function createMenuBtn(text)
   scene.view:insert(playBtnGroup)
   playBtn:addEventListener("tap", function ()
     state.task = text
-    gotoGame()
+    gotoSubMenu()
   end)
 
   buttonsCount = buttonsCount + 1
@@ -39,11 +39,11 @@ function scene:create(event)
   local background = display.newRect(sceneGroup, display.contentCenterX, display.contentCenterY, display.contentWidth, display.contentHeight)
   background:setFillColor(unpack(utils.rgb(243, 230, 219)))
 
-  createMenuBtn("a + b = ?")
-  createMenuBtn("a + ? = b")
-  createMenuBtn("a - b = ?")
-  createMenuBtn("? - a = b")
-  createMenuBtn("a - ? = b")
+  createLvlBtn("a + b = ?")
+  createLvlBtn("a + ? = b")
+  createLvlBtn("a - b = ?")
+  createLvlBtn("? - a = b")
+  createLvlBtn("a - ? = b")
 end
 
 scene:addEventListener("create")
