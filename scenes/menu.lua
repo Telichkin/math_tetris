@@ -44,6 +44,7 @@ function scene:create(event)
   createLvlBtn("a - b = ?")
   createLvlBtn("? - a = b")
   createLvlBtn("a - ? = b")
+  createLvlBtn("a * b = ?")
 end
 
 scene:addEventListener("create")

@@ -25,8 +25,8 @@ create["a + b = ?"] = function (range, limit)
 
   return {
     type = "a + b = ?",
-    value = tostring(firstAndSecond[1]) .. " + " .. tostring(firstAndSecond[2]) .. " = ?",
     answer = answer,
+    args = pairs[math.random(#pairs)],
   }
 end
 
@@ -55,8 +55,8 @@ create["a + ? = b"] = function (range, limit)
 
   return {
     type = "a + ? = b",
-    value = tostring(firstAndSum[1]) .. " + ? = " .. tostring(firstAndSum[2]),
     answer = answer,
+    args = pairs[math.random(#pairs)],
   }
 end
 
@@ -86,8 +86,8 @@ create["a - b = ?"] = function (range, limit)
 
   return {
     type = "a - b = ?",
-    value = tostring(firstAndSecond[1]) .. " - " .. tostring(firstAndSecond[2]) .. " = ?",
     answer = answer,
+    args = pairs[math.random(#pairs)],
   }
 end
 
@@ -115,8 +115,8 @@ create["? - a = b"] = function (range, limit)
 
   return {
     type = "? - a = b",
-    value = "? - " .. tostring(secondAndAnswer[1]) .. " = " .. tostring(secondAndAnswer[2]),
     answer = answer,
+    args = pairs[math.random(#pairs)],
   }
 end
 
@@ -145,8 +145,43 @@ create["a - ? = b"] = function (range, limit)
 
   return {
     type = "a - ? = b",
-    value = tostring(firstAndAnswer[1]) .. " - ? = " .. tostring(firstAndAnswer[2]),
     answer = answer,
+    args = pairs[math.random(#pairs)],
+  }
+end
+
+-- Генерируется много простых чисел, из-за этого
+-- примеры получаются неинтересными: 61 * 1 = ?, 1 * 67 = ? и т.д.
+-- Чтобы примеры были интересными, нужно как-то связать генерацию 
+-- чисел с генерацией примеров. А еще нужно решить, что значит
+-- задача "умножение с лимитом 10". Лимит в левой или в правой части?
+create["a * b = ?"] = function (range, limit)
+  local answer
+  if #range == 1 then
+    answer = range[1]
+  else
+    answer = range[math.random(2, #range)]
+  end
+
+  if answer == 1 then
+    return create["a * ? = b"](range, limit)
+  end
+
+  local pairs = {}
+  if (answer == 2) then
+    local pairsFor2 = {{1, 2}, {2, 1}}
+    table.insert(pairs, {pairsFor2[math.random(2)]})
+  end
+  for i = 1, answer - 1 do
+    if answer % i == 0 then
+      table.insert(pairs, {i, math.floor(answer / i)})
+    end
+  end
+  local firstAndSecond = pairs[math.random(#pairs)]
+  return {
+    type = "a * b = ?",
+    answer = answer,
+    args = pairs[math.random(#pairs)],
   }
 end
 
@@ -174,7 +209,6 @@ function M.createNumber(types, range, limit)
   local number = range[math.random(#range)]
   return {
     type = "number",
-    value = tostring(number),
     answer = number,
   }
 end

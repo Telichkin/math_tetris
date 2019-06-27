@@ -125,11 +125,31 @@ local function findInLastTasks(limit, fn)
   return {valid = valid, invalid = invalid}
 end
 
-
+--
+-- Лимит должен подбираться для каждой задачи отдельно.
+-- Суть лимита в том, чтобы сгенерировать такое число,
+-- для которого точно можно сгенерировать задачу из списка 
+-- типов. 
+--
+-- ### Пример
+-- Если у меня есть типы "a + b = ?" и "a + ? = b",
+-- и лимит равен 10, то для них справедливо следующее:
+--  a <= 10, b <= 10, ? <= 20
+--  a <= 10, ? <= 10, b <= 20
+-- * ? -- это число, которое нужно сгенерировать
+--
 local function generateRandomTask(types, limit)
-  local answers = findInLastTasks(limit, function (task) return task.type ~= "number" end)
-  local numbers = findInLastTasks(limit, function (task) return task.type == "number" end)
   local taskType = types[math.random(#types)]
+  local answersLimit = limit
+
+  if taskType:match("*") then
+    answersLimit = limit * limit
+  elseif taskType:match("+") then
+    answersLimit = limit + limit
+  end
+
+  local answers = findInLastTasks(answersLimit, function (task) return task.type ~= "number" end)
+  local numbers = findInLastTasks(limit, function (task) return task.type == "number" end)
 
   local shouldBeValid = (math.random() > 0.45) and (#answers.valid > 0 or #numbers.valid > 0)
   if shouldBeValid then
@@ -202,17 +222,22 @@ local function createNewBox()
   box.y = - (gameGroup.height / 2 + boxSize.height * 0.7)
   gameGroup:insert(box)
 
-  local task = generateRandomTask({state.task}, state.limit)
-  local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
-  if (task.type == "number") then
-    shape:setFillColor(unpack(utils.rgb(242, 177, 120)))
-  else
-    shape:setFillColor(unpack(utils.rgb(254, 218, 65)))
-  end
   local marginShape = display.newRect(box, 0, 0, boxSize.width, boxSize.height + boxSize.marginX)
   marginShape:setFillColor(0, 0, 0, 0)
 
-  local text = display.newText(box, task.value, 0, 0, "assets/Roboto-Black", 15)
+  local task = generateRandomTask({state.task}, state.limit)
+  local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
+
+  local textContent
+  if (task.type == "number") then
+    textContent = tostring(task.answer)
+    shape:setFillColor(unpack(utils.rgb(242, 177, 120)))
+  else
+    textContent = task.type:gsub("a", task.args[1]):gsub("b", task.args[2])
+    shape:setFillColor(unpack(utils.rgb(254, 218, 65)))
+  end
+
+  local text = display.newText(box, textContent, 0, 0, "assets/Roboto-Black", 15)
   text:setFillColor(1, 1, 1)
 
   updateBoxPosition(math.random(numberOfBoxes))
