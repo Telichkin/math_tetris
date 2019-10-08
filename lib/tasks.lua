@@ -1,230 +1,301 @@
 local M = {}
-local create = {}
+local generate = {}
 
 
-create["a + b = ?"] = function (range, limit)
-  local answer
-  if #range == 1 then
-    answer = range[1]
-  else
-    answer = range[math.random(2, #range)]
-  end
-
-  if answer == 1 then 
-    return create["a + ? = b"](range, limit) 
-  end
-
-  local pairs = {}
-  if (answer == 2) then 
-    table.insert(pairs, {1, 1})
-  end
-  for i = 1, answer - 1 do
-    table.insert(pairs, {i, answer - i})
-  end
-  local firstAndSecond = pairs[math.random(#pairs)]
-
-  return {
-    type = "a + b = ?",
-    answer = answer,
-    args = pairs[math.random(#pairs)],
-  }
-end
-
-
-create["a + ? = b"] = function (range, limit) 
-  local maxIndex = #range
-  if range[maxIndex] == limit then
-    maxIndex = maxIndex - 1
-  end
-
-  if maxIndex == 0 then 
-    return create["a + b = ?"](range, limit)
-  end
-
-  local answer = range[math.random(maxIndex)]
-
-  local pairs = {}
-  if limit - answer == 1 then
-    table.insert(pairs, {1, answer + 1})
-  else
-    for i = 1, limit - answer do
-      table.insert(pairs, {i, answer + i})
+generate["a + b = ?"] = function (limit)
+  local tasks = {}
+  for a = 1, limit do
+    for b = 1, limit do
+      tasks[#tasks + 1] = {
+        type = "a + b = ?",
+        a = a,
+        b = b,
+        ["?"] = a + b,
+      }
     end
   end
-  local firstAndSum = pairs[math.random(#pairs)]
 
-  return {
-    type = "a + ? = b",
-    answer = answer,
-    args = pairs[math.random(#pairs)],
-  }
+  local numbers = {}
+  for n = 2, limit + limit do
+    numbers[n] = {
+      type = "number",
+      n = n,
+    }
+  end
+
+  return tasks, numbers
 end
 
 
-create["a - b = ?"] = function (range, limit)
-  local maxIndex = #range
-  if range[maxIndex] == limit then
-    maxIndex = maxIndex - 1
-  end
-
-  if maxIndex == 0 then
-    return create["? - a = b"](range, limit)
-  end
-
-  local answer = range[math.random(maxIndex)]
-
-  local pairs = {}
-
-  if limit - answer == 1 then
-    table.insert(pairs, {answer + 1, 1})
-  else
-    for i = 1, limit - answer do
-      table.insert(pairs, {answer + i, i})
+generate["a + ? = b"] = function (limit)
+  local tasks = {}
+  for a = 1, limit do
+    for q = 1, limit do
+      tasks[#tasks + 1] = {
+        type = "a + ? = b",
+        a = a,
+        b = a + q,
+        ["?"] = q,
+      }
     end
   end
-  local firstAndSecond = pairs[math.random(#pairs)]
 
-  return {
-    type = "a - b = ?",
-    answer = answer,
-    args = pairs[math.random(#pairs)],
-  }
+  local numbers = {}
+  for n = 1, limit do
+    numbers[#numbers + 1] = {
+      type = "number",
+      n = n,
+    }
+  end
+
+  return tasks, numbers
 end
 
 
-create["? - a = b"] = function (range, limit) 
-  local answer
-  if #range == 1 then
-    answer = range[1]
-  else
-    answer = range[math.random(2, #range)]
-  end
-
-  if answer == 1 then 
-    return create["a - b = ?"](range, limit) 
-  end
-
-  local pairs = {}
-  if (answer == 2) then 
-    table.insert(pairs, {1, 1})
-  end
-  for i = 1, answer - 1 do
-    table.insert(pairs, {answer - i, i})
-  end
-  local secondAndAnswer = pairs[math.random(#pairs)]
-
-  return {
-    type = "? - a = b",
-    answer = answer,
-    args = pairs[math.random(#pairs)],
-  }
-end
-
-
-create["a - ? = b"] = function (range, limit)
-  local maxIndex = #range
-  if range[maxIndex] == limit then
-    maxIndex = maxIndex - 1
-  end
-
-  if maxIndex == 0 then
-    return create["? - a = b"](range, limit)
-  end
-
-  local answer = range[math.random(maxIndex)]
-
-  local pairs = {}
-  if limit - answer == 1 then
-    table.insert(pairs, {answer + 1, 1})
-  else
-    for i = 1, limit - answer do
-      table.insert(pairs, {answer + i, i})
+generate["a - b = ?"] = function (limit)
+  local tasks = {}
+  for a = 2, limit do
+    for b = 1, a - 1 do
+      tasks[#tasks + 1] = {
+        type = "a - b = ?",
+        a = a,
+        b = b,
+        ["?"] = a - b,
+      }
     end
   end
-  local firstAndAnswer = pairs[math.random(#pairs)]
 
-  return {
-    type = "a - ? = b",
-    answer = answer,
-    args = pairs[math.random(#pairs)],
-  }
+  local numbers = {}
+  for n = 2, limit - 1 do
+    numbers[#numbers + 1] = {
+      type = "number",
+      n = n,
+    }
+  end
+
+  return tasks, numbers
 end
 
--- Генерируется много простых чисел, из-за этого
--- примеры получаются неинтересными: 61 * 1 = ?, 1 * 67 = ? и т.д.
--- Чтобы примеры были интересными, нужно как-то связать генерацию 
--- чисел с генерацией примеров. А еще нужно решить, что значит
--- задача "умножение с лимитом 10". Лимит в левой или в правой части?
-create["a * b = ?"] = function (range, limit)
-  local answer
-  if #range == 1 then
-    answer = range[1]
-  else
-    answer = range[math.random(2, #range)]
-  end
 
-  if answer == 1 then
-    return create["a * ? = b"](range, limit)
-  end
-
-  local pairs = {}
-  if (answer == 2) then
-    local pairsFor2 = {{1, 2}, {2, 1}}
-    table.insert(pairs, {pairsFor2[math.random(2)]})
-  end
-  for i = 1, answer - 1 do
-    if answer % i == 0 then
-      table.insert(pairs, {i, math.floor(answer / i)})
+generate["? - a = b"] = function (limit)
+  local tasks = {}
+  for q = 2, limit do
+    for a = 1, q - 1 do
+      tasks[#tasks + 1] = {
+        type = "? - a = b",
+        a = a,
+        b = q - a,
+        ["?"] = q,
+      }
     end
   end
-  local firstAndSecond = pairs[math.random(#pairs)]
-  return {
-    type = "a * b = ?",
-    answer = answer,
-    args = pairs[math.random(#pairs)],
-  }
-end
 
-
-function M.createTask(type, range, limit)
-  return create[type](range, limit)
-end
-
-
-function M.createNumber(types, range, limit)
-  local t = {}
-  for index, type in pairs(types) do
-    t[type] = index
+  local numbers = {}
+  for n = 2, limit do
+    number[#numbers + 1] = {
+      type = "number",
+      n = n,
+    }
   end
 
-  local maxIsForbidden = t["a + ? = b"] or t["a - b = ?"] or t["a - ? = b"]
-  local oneIsForbidden = t["a + b = ?"] or t["? - a = b"]
-
-  if oneIsForbidden and not maxIsForbidden and range[1] == 1 then
-    table.remove(range, 1)
-  elseif maxIsForbidden and not oneIsForbidden and range[#range] == limit then
-    table.remove(range, #range)
-  end
-
-  local number = range[math.random(#range)]
-  return {
-    type = "number",
-    answer = number,
-  }
+  return tasks, numbers
 end
 
 
-function M.isSolved(task1, task2)
-  if not task1 or not task2 or task1.type == task2.type then
+generate["a - ? = b"] = function (limit)
+  local tasks = {}
+  for a = 2, limit do
+    for q = 1, a - 1 do
+      tasks[#tasks + 1] = {
+        type = "a - ? = b",
+        a = a,
+        b = a - q,
+        ["?"] = q,
+      }
+    end
+  end
+
+  local numbers = {}
+  for n = 1, limit - 1 do
+    numbers[#numbers + 1] = {
+      type = "number",
+      n = n,
+    }
+  end
+
+  return tasks, numbers
+end
+
+
+generate["a * b = ?"] = function (limit)
+  local tasks = {}
+  for a = 2, limit do
+    for b = 2, limit do
+      tasks[#tasks + 1] = {
+        type = "a * b = ?",
+        a = a,
+        b = b,
+        ["?"] = a * b,
+      }
+    end
+  end
+
+
+  local numbers = {}
+  for a = 2, limit do
+    for b = 2, limit do
+      numbers[#numbers + 1] = {
+        type = "number",
+        n = a * b,
+      }
+    end
+  end
+
+  return tasks, numbers
+end
+
+
+generate["a * ? = b"] = function (limit)
+  local tasks = {}
+  for a = 1, limit do
+    for q = 1, limit do
+      tasks[#tasks + 1] = {
+        type = "a * ? = b",
+        a = a,
+        b = a * q,
+        ["?"] = q,
+      }
+    end
+  end
+
+  local numbers = {}
+  for n = 1, limit do
+    numbers[#numbers + 1] = {
+      type = "number",
+      n = n,
+    }
+  end
+
+  return tasks, numbers
+end
+
+
+function filter(arr, func)
+  local newArr = {}
+  if #arr == 0 then return newArr end
+
+  for i = 1, #arr do
+    if func(arr[i]) == true then
+      newArr[#newArr + 1] = arr[i]
+    end
+  end
+
+  return newArr
+end
+
+
+-- Print contents of `tbl`, with indentation.
+-- `indent` sets the initial level of indentation.
+function tprint (tbl, indent)
+  if not indent then indent = 0 end
+  for k, v in pairs(tbl) do
+    formatting = string.rep("  ", indent) .. k .. ": "
+    if type(v) == "table" then
+      print(formatting)
+      tprint(v, indent+1)
+    elseif type(v) == 'boolean' then
+      print(formatting .. tostring(v))      
+    else
+      print(formatting .. v)
+    end
+  end
+end
+
+
+function M.random(tasks, numbers, b1, b2, b3)
+  local prob = math.random()
+  local blocksOnField = filter({b1, b2, b3}, function (b) return b ~= nil end)
+  -- вероятность правильного решения
+  local n2probs = {
+    [0] = 0, 
+    [1] = 0.1, 
+    [2] = 0.16, 
+    [3] = 0.5,
+  }
+  local rightProb = n2probs[#blocksOnField]
+  tprint(blocksOnField)
+  if prob < rightProb then
+    -- Случайно выбираем блок под который находим правильное решение
+    -- Если блок -- задача, то правильное решение -- число
+    -- Если блок -- число, то правильное решение -- задача
+    local block = blocksOnField[math.random(#blocksOnField)]
+    if block.type ~= "number" then
+      return {
+        type = "number",
+        n = block["?"],
+      }
+    else
+      print("block.n: ", block.n)
+      local rightTasks = filter(tasks, function (t) return t["?"] == block.n end)
+      return rightTasks[math.random(#rightTasks)]
+    end
+  elseif prob >= rightProb and prob <= ((rightProb + 1) / 2) then
+    -- Если блок -- задача, то неправильно число не должно быть равно полю "?" 
+    -- Если блок -- число, то неправильное число не должно быть равно число в блоке
+    local wrongNumbers = filter(numbers, function (n)
+      if not n then return false end
+
+      for i = 1, #blocksOnField do
+        local b = blocksOnField[i]
+        if b.type ~= "number" then
+          if n.n == b["?"] then
+            return false
+          end
+        else
+          if n.n == b.n then
+            return false
+          end
+        end
+      end
+      return true
+    end)
+    return wrongNumbers[math.random(#wrongNumbers)]
+  else  -- [3]
+    -- Если блок -- задача, то неправильная задача не должна повторять задачу в блоке
+    -- Если блок -- число, то неправильная задача должна иметь поле "?" не равно числу в блоке
+    local wrongTasks = filter(tasks, function (t) 
+      for i = 1, #blocksOnField do
+        local b = blocksOnField[i]
+        if b.type ~= "number" then
+          if t["?"] == b["?"] and t.a == b.a and t.b == b.b then
+            return false
+          end
+        else
+          if t["?"] == b.n then
+            return false
+          end
+        end
+      end
+      return true
+    end)
+    return wrongTasks[math.random(#wrongTasks)]
+  end
+end
+
+function M.isSolved(b1, b2)
+  if not b1 or not b2 or b1.type == b2.type then
     return false 
-  elseif ((task1.type == "number" and task2.type ~= "number") or
-          (task2.type == "number" and task1.type ~= "number"))
-  then
-    return task1.answer == task2.answer
+  elseif b1.type == "number" and b2.type ~= "number" then
+    return b1.n == b2["?"]
+  elseif b2.type == "number" and b1.type ~= "number" then
+    return b1["?"] == b2.n
   else
     return false
   end
 end
 
+function M.generate(task, limit)
+  return generate[task](limit) 
+end
 
 return M

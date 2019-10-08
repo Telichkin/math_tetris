@@ -5,20 +5,29 @@ local tasks = require("lib.tasks")
 local utils = require("lib.utils")
 local state = require("lib.state")
 
-
+-- Нужна другая механика
+-- Что-то вроде волн: сверху появляется "волна" из трех задач и игрок должен указать в какую задачу
+-- он "швырнет" решение.
+-- если решение неправильное, то появляется новая волна или снимается жизнь.
+-- волны идут с постоянной скоростью
 local scene = composer.newScene()
 local gameGroup
 local mainGroup
+local lvlTasks
+local lvlNumbers
 
 physics.start()
 physics.setGravity(0, 0)
 
 
 local box
-local numberOfBoxes = 3
+local fieldW = display.contentWidth * 0.92
+local fieldH = display.contentHeight * 0.8
+local numberOfBoxesW = 3
+local numberOfBoxesH = 9
 local boxSize = {
-  width = display.contentWidth * 0.92 / numberOfBoxes,
-  height = display.contentWidth / (numberOfBoxes * 2) - 5,
+  width = fieldW / numberOfBoxesW,
+  height = fieldH / numberOfBoxesH - 5,
   marginY = 6,
   marginX = 4,
   radius = 10,
@@ -59,8 +68,8 @@ end
 local function updateBoxPosition(index) 
   if (index < 1) then
     index = 1
-  elseif (index > numberOfBoxes) then
-    index = numberOfBoxes
+  elseif (index > numberOfBoxesW) then
+    index = numberOfBoxesW
   end
 
   if (boxLowerY(box) < maxPositionY[index]) then 
@@ -92,6 +101,7 @@ local function swipeBox(event)
       elseif (xDiff > 0) then
         updateBoxPosition(box.positionIndex + 1)
       end
+    -- swipe down
     elseif (yDiff > 30 and box.myMoveFast == false) then
       box.myMoveFast = true
       box:setLinearVelocity(0, 600)
@@ -99,78 +109,6 @@ local function swipeBox(event)
   end
   
   return true
-end
-
-
-local function findInLastTasks(limit, fn) 
-  local isValidTable = {}
-  for i = 1, limit do table.insert(isValidTable, i, false) end
-
-  for _, taskList in pairs(lastTasks) do
-    local task = taskList[#taskList]
-    if (task and fn(task)) then
-      isValidTable[task.answer] = true
-    end
-  end
-
-  local valid, invalid = {}, {}
-  for i, isValid in pairs(isValidTable) do
-    if isValid then 
-      table.insert(valid, i)
-    else
-      table.insert(invalid, i)
-    end
-  end
-
-  return {valid = valid, invalid = invalid}
-end
-
---
--- Лимит должен подбираться для каждой задачи отдельно.
--- Суть лимита в том, чтобы сгенерировать такое число,
--- для которого точно можно сгенерировать задачу из списка 
--- типов. 
---
--- ### Пример
--- Если у меня есть типы "a + b = ?" и "a + ? = b",
--- и лимит равен 10, то для них справедливо следующее:
---  a <= 10, b <= 10, ? <= 20
---  a <= 10, ? <= 10, b <= 20
--- * ? -- это число, которое нужно сгенерировать
---
-local function generateRandomTask(types, limit)
-  local taskType = types[math.random(#types)]
-  local answersLimit = limit
-
-  if taskType:match("*") then
-    answersLimit = limit * limit
-  elseif taskType:match("+") then
-    answersLimit = limit + limit
-  end
-
-  local answers = findInLastTasks(answersLimit, function (task) return task.type ~= "number" end)
-  local numbers = findInLastTasks(limit, function (task) return task.type == "number" end)
-
-  local shouldBeValid = (math.random() > 0.45) and (#answers.valid > 0 or #numbers.valid > 0)
-  if shouldBeValid then
-    if #answers.valid == 0 and #numbers.valid > 0 then
-      return tasks.createTask(taskType, numbers.valid, limit)
-    elseif #numbers.valid == 0 and #answers.valid > 0 then
-      return tasks.createNumber(types, answers.valid, limit)
-    else
-      if math.random() > 0.5 then
-        return tasks.createTask(taskType, numbers.valid, limit)
-      else
-        return tasks.createNumber(types, answers.valid, limit)
-      end
-    end
-  else
-    if math.random() > 0.5 then
-      return tasks.createTask(taskType, numbers.invalid, limit)
-    else
-      return tasks.createNumber(types, answers.invalid, limit)
-    end
-  end
 end
 
 
@@ -225,22 +163,22 @@ local function createNewBox()
   local marginShape = display.newRect(box, 0, 0, boxSize.width, boxSize.height + boxSize.marginX)
   marginShape:setFillColor(0, 0, 0, 0)
 
-  local task = generateRandomTask({state.task}, state.limit)
+  local task = tasks.random(lvlTasks, lvlNumbers, lastTasks[1][#lastTasks[1]], lastTasks[2][#lastTasks[2]], lastTasks[3][#lastTasks[3]])
   local shape = display.newRoundedRect(box, 0, 0, boxSize.width, boxSize.height, boxSize.radius)
 
   local textContent
   if (task.type == "number") then
-    textContent = tostring(task.answer)
+    textContent = tostring(task.n)
     shape:setFillColor(unpack(utils.rgb(242, 177, 120)))
   else
-    textContent = task.type:gsub("a", task.args[1]):gsub("b", task.args[2])
+    textContent = task.type:gsub("a", task.a):gsub("b", task.b)
     shape:setFillColor(unpack(utils.rgb(254, 218, 65)))
   end
 
   local text = display.newText(box, textContent, 0, 0, "assets/Roboto-Black", 15)
   text:setFillColor(1, 1, 1)
 
-  updateBoxPosition(math.random(numberOfBoxes))
+  updateBoxPosition(math.random(numberOfBoxesW))
 
   physics.addBody(box, "dynamic", {bounce = 0})
 
@@ -306,6 +244,16 @@ end
 
 function scene:create(event)
   local sceneGroup = self.view
+  lvlTasks, lvlNumbers = tasks.generate(state.task, state.limit)
+  lastTasks = {
+    {tasks.random(lvlTasks, lvlNumbers)},
+    {},
+    {},
+  }
+
+  for col = 1, #lastTasks do
+
+  end
 
   physics.pause()
 
@@ -314,7 +262,7 @@ function scene:create(event)
   
   createBackground()
 
-  gameGroup = display.newContainer(display.contentWidth * 0.92, display.contentWidth)
+  gameGroup = display.newContainer(fieldW, fieldH)
   gameGroup.x = display.contentCenterX
   gameGroup.y = display.contentCenterY
   sceneGroup:insert(gameGroup)
