@@ -182,11 +182,10 @@ end
 
 function filter(arr, func)
   local newArr = {}
-  if #arr == 0 then return newArr end
 
-  for i = 1, #arr do
-    if func(arr[i]) == true then
-      newArr[#newArr + 1] = arr[i]
+  for i, item in pairs(arr) do
+    if func(item) == true then
+      newArr[#newArr + 1] = item
     end
   end
 
@@ -212,73 +211,66 @@ function tprint (tbl, indent)
 end
 
 
-function M.random(tasks, numbers, b1, b2, b3)
+function M.createOne(tasks, numbers, isRight, wantType, b1, b2, b3)
   local prob = math.random()
   local blocksOnField = filter({b1, b2, b3}, function (b) return b ~= nil end)
-  -- вероятность правильного решения
-  local n2probs = {
-    [0] = 0, 
-    [1] = 0.1, 
-    [2] = 0.16, 
-    [3] = 0.5,
-  }
-  local rightProb = n2probs[#blocksOnField]
-  tprint(blocksOnField)
-  if prob < rightProb then
-    -- Случайно выбираем блок под который находим правильное решение
+  -- Случайно выбираем блок под который находим решение
+  local block = (#blocksOnField > 0) and blocksOnField[math.random(#blocksOnField)] or nil
+  if isRight and block then
     -- Если блок -- задача, то правильное решение -- число
     -- Если блок -- число, то правильное решение -- задача
-    local block = blocksOnField[math.random(#blocksOnField)]
-    if block.type ~= "number" then
+    if block.task.type ~= "number" then
       return {
         type = "number",
-        n = block["?"],
+        n = block.task["?"],
       }
     else
-      print("block.n: ", block.n)
-      local rightTasks = filter(tasks, function (t) return t["?"] == block.n end)
+      local rightTasks = filter(tasks, function (t) return t["?"] == block.task.n end)
       return rightTasks[math.random(#rightTasks)]
     end
-  elseif prob >= rightProb and prob <= ((rightProb + 1) / 2) then
-    -- Если блок -- задача, то неправильно число не должно быть равно полю "?" 
-    -- Если блок -- число, то неправильное число не должно быть равно число в блоке
-    local wrongNumbers = filter(numbers, function (n)
-      if not n then return false end
+  else
+    local calcNumber = false
+    if wantType then
+      calcNumber = wantType == "number"
+    elseif block then
+      calcNumber = block.task.type ~= "number"
+    else
+      calcNumber = prob < 0.5
+    end
 
-      for i = 1, #blocksOnField do
-        local b = blocksOnField[i]
-        if b.type ~= "number" then
-          if n.n == b["?"] then
-            return false
-          end
-        else
-          if n.n == b.n then
-            return false
-          end
-        end
-      end
-      return true
-    end)
-    return wrongNumbers[math.random(#wrongNumbers)]
-  else  -- [3]
-    -- Если блок -- задача, то неправильная задача не должна повторять задачу в блоке
-    -- Если блок -- число, то неправильная задача должна иметь поле "?" не равно числу в блоке
-    local wrongTasks = filter(tasks, function (t) 
-      for i = 1, #blocksOnField do
-        local b = blocksOnField[i]
-        if b.type ~= "number" then
-          if t["?"] == b["?"] and t.a == b.a and t.b == b.b then
-            return false
-          end
-        else
-          if t["?"] == b.n then
-            return false
+    if calcNumber then
+      local wrongNumbers = filter(numbers, function (n)
+        for i, b in pairs(blocksOnField) do
+          if b.type ~= "number" then
+            if n.n == b["?"] then
+              return false
+            end
+          else
+            if n.n == b.n then
+              return false
+            end
           end
         end
-      end
-      return true
-    end)
-    return wrongTasks[math.random(#wrongTasks)]
+        return true
+      end)
+      return wrongNumbers[math.random(#wrongNumbers)]
+    else
+      local wrongTasks = filter(tasks, function (t) 
+        for i, b in pairs(blocksOnField) do
+          if b.type ~= "number" then
+            if t["?"] == b["?"] and t.a == b.a and t.b == b.b then
+              return false
+            end
+          else
+            if t["?"] == b.n then
+              return false
+            end
+          end
+        end
+        return true
+      end)
+      return wrongTasks[math.random(#wrongTasks)]
+    end
   end
 end
 

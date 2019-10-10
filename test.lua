@@ -17,8 +17,8 @@ end
 
 
 function TestFoo:testTrue()
-  local tasks, numbers = tasks.generate["a + ? = b"](10)
-  lu.assertEquals(tasks, 5)
+  local foo, bar = 1, 2
+  lu.assertEquals(bar, 2)
 end
 
 os.exit(lu.LuaUnit:run())
