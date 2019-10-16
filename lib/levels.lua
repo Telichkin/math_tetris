@@ -87,4 +87,16 @@ return {
       {"task", "    ", "task"},
     }
   },
+  {
+    name = "Сложение",
+    level = 9,
+    task = "a + b = ?",
+    limit = 200,
+    scheme = {
+      {"number", "number", "number"},
+      {"number", "number", "number"},
+      {"number", "number", "number"},
+      {"number", "number", "       "},
+    }
+  },
 }
