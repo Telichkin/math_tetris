@@ -14,6 +14,8 @@ function readInput(event)
       lastEvent = "Swipe Right" 
     elseif yDiff > 30 then
       lastEvent = "Swipe Down"
+    elseif yDiff < -30 then
+      lastEvent = "Swipe Up"
     end
   end
 

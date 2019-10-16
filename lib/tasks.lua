@@ -216,6 +216,8 @@ function M.createOne(tasks, numbers, isRight, wantType, b1, b2, b3)
   local blocksOnField = filter({b1, b2, b3}, function (b) return b ~= nil end)
   -- Случайно выбираем блок под который находим решение
   local block = (#blocksOnField > 0) and blocksOnField[math.random(#blocksOnField)] or nil
+  isRight = isRight and (math.random() <= (#blocksOnField / 3))
+
   if isRight and block then
     -- Если блок -- задача, то правильное решение -- число
     -- Если блок -- число, то правильное решение -- задача
@@ -275,12 +277,12 @@ function M.createOne(tasks, numbers, isRight, wantType, b1, b2, b3)
 end
 
 function M.isSolved(b1, b2)
-  if not b1 or not b2 or b1.type == b2.type then
+  if not b1 or not b2 or b1.task.type == b2.task.type then
     return false 
-  elseif b1.type == "number" and b2.type ~= "number" then
-    return b1.n == b2["?"]
-  elseif b2.type == "number" and b1.type ~= "number" then
-    return b1["?"] == b2.n
+  elseif b1.task.type == "number" and b2.task.type ~= "number" then
+    return b1.task.n == b2.task["?"]
+  elseif b2.task.type == "number" and b1.task.type ~= "number" then
+    return b1.task["?"] == b2.task.n
   else
     return false
   end
