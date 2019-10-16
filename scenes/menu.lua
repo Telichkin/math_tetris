@@ -2,31 +2,36 @@ local composer = require("composer")
 local widget = require("widget")
 local utils = require("lib.utils")
 local state = require("lib.state")
+local levels = require("lib.levels")
 
 
 local scene = composer.newScene()
 local buttonsCount = 0
+local scrollView
 
 
-local function gotoSubMenu()
-  composer.gotoScene("scenes.subMenu")
+local function gotoGame()
+  composer.gotoScene("scenes.game")
 end
 
 
-local function createLvlBtn(text) 
+local function createLvlBtn(lvl) 
   local playBtnGroup = display.newGroup()
-  local playBtn = display.newRoundedRect(playBtnGroup, 0, 0, 240, 60, 10)
-  playBtn:setFillColor(utils.rgb(145, 145, 145, 1))
-  local playBtnText = display.newText(playBtnGroup, text, 0, 0, "assets/Roboto-Medium", 32)
-  playBtnText:setFillColor(utils.rgb(255, 255, 255, 1))
+  local playBtn = display.newRect(playBtnGroup, 0, 0, 240, 60)
+  playBtn:setFillColor(utils.rgb(255, 255, 255, 1))
+  playBtn.strokeWidth = 4
+  playBtn:setStrokeColor(utils.rgb(149, 175, 237))
+
+  local playBtnText = display.newText(playBtnGroup, lvl.name .. " " .. tostring(lvl.level), 0, 0, "assets/Neucha-Regular", 20)
+  playBtnText:setFillColor(utils.rgb(0, 0, 0, 1))
 
   playBtnGroup.x = display.contentCenterX
   playBtnGroup.y = (buttonsCount + 1) * (60 + 15)
 
-  scene.view:insert(playBtnGroup)
+  scrollView:insert(playBtnGroup)
   playBtn:addEventListener("tap", function ()
-    state.task = text
-    gotoSubMenu()
+    state.lvl = lvl
+    gotoGame()
   end)
 
   buttonsCount = buttonsCount + 1
@@ -36,15 +41,20 @@ end
 function scene:create(event)
   local sceneGroup = self.view
 
-  local background = display.newRect(sceneGroup, display.contentCenterX, display.contentCenterY, display.contentWidth, display.contentHeight)
-  background:setFillColor(utils.rgb(243, 230, 219))
+  scrollView = widget.newScrollView({
+    x = display.contentCenterX,
+    y = display.contentCenterY,
+    width = display.contentWidth,
+    height = display.contentHeight,
+  })
 
-  createLvlBtn("a + b = ?")
-  createLvlBtn("a + ? = b")
-  createLvlBtn("a - b = ?")
-  createLvlBtn("? - a = b")
-  createLvlBtn("a - ? = b")
-  createLvlBtn("a * b = ?")
+  sceneGroup:insert(scrollView)
+
+  for i, lvl in pairs(levels) do
+    createLvlBtn(lvl)
+  end
+
+  scrollView:setScrollHeight(10 + (buttonsCount * 80))
 end
 
 scene:addEventListener("create")

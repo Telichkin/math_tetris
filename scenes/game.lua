@@ -184,20 +184,13 @@ local function tick(event)
   --------------------------
   if not gameIsOver then
     if not gameInited then
-      lvlTasks, lvlNumbers = tasks.generate(state.task, state.limit)
-      -- TODO: Схема расположения статических боксов должна читаться из глобального стейта (lib.state).
-      -- Схема читается наоборот, то есть снизу вверх.
-      local scheme = {
-        {" ", "task", " "},
-        {" ", "task", " "},
-        {" ", " ", " "},
-        {" ", " ", " "},
-      }
+      lvlTasks, lvlNumbers = tasks.generate(state.lvl.task, state.lvl.limit)
+      local scheme = state.lvl.scheme
 
       for row = 1, #scheme do
         for col = 1, 3 do
           local type = scheme[row][col]
-          if type ~= " " then
+          if type == "task" or type == "number" then
             staticBoxes[col][row] = createBox({
               col = col, 
               y = (fieldH / 2) - ((row - 1) * (boxHeight + boxMarginY)) - (boxHeight / 2 + boxMarginY),
