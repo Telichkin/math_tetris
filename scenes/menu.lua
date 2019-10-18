@@ -11,16 +11,13 @@ local scrollView
 
 
 local function gotoGame()
-  composer.gotoScene("scenes.game")
+  composer.gotoScene("scenes.toGame")
 end
 
 
 local function createLvlBtn(lvl) 
   local playBtnGroup = display.newGroup()
-  local playBtn = display.newRect(playBtnGroup, 0, 0, 120, 100)
-  playBtn:setFillColor(utils.rgb(255, 255, 255, 1))
-  playBtn.strokeWidth = 4
-  playBtn:setStrokeColor(utils.rgb(149, 175, 237))
+  local playBtn = display.newImageRect(playBtnGroup, "assets/images/lvl-unlocked.png", 138, 114)
 
   local playBtnTitle = display.newText(playBtnGroup, lvl.name, 0, 0, "assets/Neucha-Regular", 20)
   playBtnTitle:setFillColor(utils.rgb(0, 0, 0, 1))

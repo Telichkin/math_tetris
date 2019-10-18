@@ -24,8 +24,8 @@ local numberOfBoxesH = 12
 local fieldW = display.contentWidth * 0.92
 local fieldH = display.contentHeight * 0.85
 
-local boxMarginX = 4
-local boxMarginY = 6
+local boxMarginX = 1
+local boxMarginY = 2
 local boxRadius = 0
 local boxWidth = fieldW / numberOfBoxesW - 2 * boxMarginX
 local boxHeight = fieldH / numberOfBoxesH - 5
@@ -49,6 +49,7 @@ local livesGroup
 
 local gameInited = false
 local gameIsOver = false
+local gameResult = "idle"
 local lastTickMs = 0
 local lives = maxLives
 local activeBox = nil
@@ -96,26 +97,62 @@ local function createGameOverBackground()
   local opacity = display.newRect(gameOverGroup, 0, 0, display.contentWidth, display.contentHeight)
   opacity:setFillColor(utils.rgb(0, 0, 0, 0.5))
 
-  local W, H = mainGroup.width * 0.8, mainGroup.height * 0.5
+  local W, H = mainGroup.width * 0.85, mainGroup.height * 0.7
   local background = display.newRect(gameOverGroup, 0, 0, W, H)
   background:setFillColor(utils.rgb(255, 255, 255, 1))
   background.strokeWidth = 4
   background:setStrokeColor(utils.rgb(149, 175, 237))
 
+  local title = display.newText(
+    gameOverGroup, 
+    gameResult == "win" and "Уровень пройден!" or "Попробуй ещё раз",
+    0,
+    - (H / 2) + 40,
+    mainFont, 27
+  )
+  title:setFillColor(utils.rgb(0, 0, 0))
+
+  local persona = display.newImage(
+    gameOverGroup,
+    "assets/images/" .. (gameResult == "win" and "win" or "lose") .. ".jpg",
+    0, -30
+  )
+  local pW, pH = persona.width, persona.height
+  persona.height = H * 0.36
+  persona.width = persona.height / pH * pW
+
+  local toMenu = display.newText(gameOverGroup, "Меню", 0, persona.y + (persona.height / 2) + 35, mainFont, 27)
+  toMenu:setFillColor(utils.rgb(0, 0, 0))
+
+  toMenu:addEventListener("tap", gotoMenu)
+
   local btnGroup = display.newGroup()
-  local btn = display.newRect(btnGroup, 0, 0, W * 0.6, 50)
+  local btn = display.newRect(btnGroup, 0, 0, W * 0.6, 70)
   btn:setFillColor(utils.rgb(255, 255, 255))
   btn.strokeWidth = 3
   btn:setStrokeColor(utils.rgb(56, 102, 204))
 
-  local btnText = display.newText(btnGroup, "В меню", 0, 0, mainFont, 26)
+  local btnText = display.newText({
+    parent = btnGroup, 
+    text = gameResult == "win" and "Следующий\nуровень" or "Играть\nснова", 
+    x = 0, 
+    y = 0, 
+    font = mainFont, 
+    fontSize = 26,
+    align = "center",
+  })
   btnText:setFillColor(utils.rgb(0, 0, 0))
   btnGroup.x = 0
-  btnGroup.y = 0
+  btnGroup.y = (H / 2) - 50
   gameOverGroup:insert(btnGroup)
   scene.view:insert(gameOverGroup)
 
-  btnGroup:addEventListener("tap", gotoMenu)
+  btnGroup:addEventListener("tap", function ()
+    if gameResult == "win" then
+      state.lvl = utils.nextLvl(state.lvl)
+    end
+    composer.gotoScene("scenes.toGame")
+  end)
 end
 
 
@@ -123,10 +160,9 @@ local function createBox(b)
   box = display.newGroup()
   gameGroup:insert(box)
   
-  local shape = display.newRect(box, 0, 0, boxWidth, boxHeight)
-  shape:setStrokeColor(utils.rgb(29, 41, 147, 1))
-  shape.strokeWidth = 3
-
+  -- у нас три разных типа изображений блоков
+  local name = "block-" .. tostring(math.random(3)) .. ".png"
+  local shape = display.newImageRect(box, "assets/images/" .. name, boxWidth, boxHeight)
   text = display.newText(box, "", 0, 0, mainFont, 17)
   text:setFillColor(0, 0, 0)
 
@@ -149,17 +185,10 @@ local function createLivesGroup()
   livesGroup.y = heartStartY
   livesGroup.x = heartStartX
   mainGroup:insert(livesGroup)
-  for i = 1, maxLives do
-    local shape = display.newCircle(livesGroup, ((i - 1) * (heartH + 5)), 0, heartH / 2)
-    shape:setStrokeColor(utils.rgb(29, 41, 147, 1))
-    shape.strokeWidth = 2
-    if i <= lives then
-      -- Оставшиеся жизни
-      shape:setFillColor(utils.rgb(239, 97, 97))
-    else
-      -- Потраченные жизни
-      shape:setFillColor(utils.rgb(255, 255, 255))
-    end
+  for i = 1, lives do
+    local shape = display.newImageRect(livesGroup, "assets/images/heart.png", heartH, heartH)
+    shape.x = ((i - 1) * (heartH + 5))
+    shape.y = 0
   end
 end
 
@@ -258,11 +287,13 @@ local function tick(event)
     -- Проиграл
     if lives == 0 then
       gameIsOver = true
+      gameResult = "lose"
     end
 
     -- Победил, если поле осталось чистым
     if (not last(staticBoxes[1])) and (not last(staticBoxes[2])) and (not last(staticBoxes[3])) then
       gameIsOver = true
+      gameResult = "win"
     end
   end
 
