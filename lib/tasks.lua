@@ -288,8 +288,20 @@ function M.isSolved(b1, b2)
   end
 end
 
+local function init(tasks, numbers)
+  for i, task in pairs(tasks) do
+    task.text = task.type:gsub("a", task.a):gsub("b", task.b)
+  end
+
+  for i, num in pairs(numbers) do
+    num.text = tostring(num.n)
+  end
+
+  return tasks, numbers
+end
+
 function M.generate(task, limit)
-  return generate[task](limit) 
+  return init(generate[task](limit))
 end
 
 return M

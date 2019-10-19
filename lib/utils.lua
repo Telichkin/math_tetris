@@ -18,4 +18,18 @@ function M.nextLvl(lvl)
   return levels[1]
 end
 
+
+function M.deepCopy(obj)
+  if type(obj) ~= "table" then
+    return obj
+  end
+
+  local copy = {}
+  for k, v in pairs(obj) do
+    copy[k] = M.deepCopy(v)
+  end
+  return copy
+end
+
+
 return M
