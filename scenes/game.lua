@@ -19,13 +19,13 @@ local inputReader = require("lib.inputReader")
 local mainFont = "assets/Neucha-Regular"
 
 local numberOfBoxesW = 3
-local numberOfBoxesH = 12
+local numberOfBoxesH = 10
 
 local fieldW = display.contentWidth * 0.92
 local fieldH = display.contentHeight * 0.85
 
 local boxMarginX = 1
-local boxMarginY = 2
+local boxMarginY = 1
 local boxRadius = 0
 local boxWidth = fieldW / numberOfBoxesW - (2 * boxMarginX)
 local boxHeight = fieldH / numberOfBoxesH - 5
@@ -57,6 +57,7 @@ local staticBoxesR = {{}, {}, {}}
 local currS = {
   inited = false,
   isOver = false,
+  isVisible = false,
   result = "idle",
   lives = maxLives,
   -- boxes
@@ -68,11 +69,6 @@ local prevS = utils.deepCopy(currS)
 -----------------------------
 -- Вспомогательные функции --
 -----------------------------
-local function gotoMenu()
-  composer.gotoScene("scenes.menu", {time = 500, effect = "slideRight"})
-end
-
-
 local function last(arr)
   return arr[#arr]
 end
@@ -108,9 +104,8 @@ end
 local function createGameOverWindow()
   gameOverWindow = display.newGroup()
   gameOverWindow.x = display.contentCenterX
-  -- gameOverWindow.y = display.contentCenterY
 
-  local W, H = mainGroup.width * 0.85, mainGroup.height * 0.7
+  local W, H = mainGroup.width * 0.85, mainGroup.height * 0.6
   local background = display.newRect(gameOverWindow, 0, 0, W, H)
   background:setFillColor(utils.rgb(255, 255, 255, 1))
   background.strokeWidth = 4
@@ -120,7 +115,7 @@ local function createGameOverWindow()
     gameOverWindow, 
     currS.result == "win" and "Уровень пройден!" or "Попробуй ещё раз",
     0,
-    - (H / 2) + 40,
+    -(H / 2) + 40,
     mainFont, 27
   )
   title:setFillColor(utils.rgb(0, 0, 0))
@@ -134,10 +129,12 @@ local function createGameOverWindow()
   persona.height = H * 0.36
   persona.width = persona.height / pH * pW
 
-  local toMenu = display.newText(gameOverWindow, "Меню", 0, persona.y + (persona.height / 2) + 35, mainFont, 27)
+  local toMenu = display.newText(gameOverWindow, "Меню", 0, persona.y + (persona.height / 2) + 35, mainFont, 21)
   toMenu:setFillColor(utils.rgb(0, 0, 0))
 
-  toMenu:addEventListener("tap", gotoMenu)
+  toMenu:addEventListener("tap", function ()
+    composer.gotoScene("scenes.menu", {time = 500, effect = "fromLeft"})
+  end)
 
   local btnGroup = display.newGroup()
   local btn = display.newRect(btnGroup, 0, 0, W * 0.6, 70)
@@ -174,8 +171,8 @@ end
 local function createBox(b)
   box = display.newGroup()
   gameGroup:insert(box)
-  -- у нас три разных типа изображений блоков
-  local name = "block-" .. tostring(math.random(3)) .. ".png"
+  -- У нас три разных типа изображений блоков
+  local name = "block-" .. tostring(math.random(14)) .. ".png"
   local shape = display.newImageRect(box, "assets/images/" .. name, boxWidth, boxHeight)
   
   text = display.newText(box, b.task.text, 0, 0, mainFont, 17)
@@ -192,8 +189,12 @@ local function createLivesGroup()
   livesGroup.y = heartStartY
   livesGroup.x = heartStartX
   mainGroup:insert(livesGroup)
-  for i = 1, currS.lives do
-    local shape = display.newImageRect(livesGroup, "assets/images/heart.png", heartH, heartH)
+  for i = 1, maxLives do
+    local shape = display.newImageRect(
+      livesGroup,
+      currS.lives >= i and "assets/images/heart_full.png" or "assets/images/heart.png",
+      heartH, heartH
+    )
     shape.x = ((i - 1) * (heartH + 5))
     shape.y = 0
   end
@@ -225,6 +226,7 @@ local function tick(event)
   -- Обновление состояния --
   --------------------------
   if not currS.isOver then
+    -- Инициализация
     if not currS.inited then
       lvlTasks, lvlNumbers = tasks.generate(state.lvl.task, state.lvl.limit)
       local scheme = state.lvl.scheme
@@ -254,55 +256,58 @@ local function tick(event)
       }
     end
 
-    local prevCol = currS.active.col
-    if lastEvent == "Swipe Left" then
-      currS.active.col = (currS.active.col - 1 < 1) and 1 or currS.active.col - 1
-    elseif lastEvent == "Swipe Right" then
-      currS.active.col = (currS.active.col + 1 > 3) and 3 or currS.active.col + 1
-    elseif lastEvent == "Swipe Down" then
-      currS.active.speed = 12
-    elseif lastEvent == "Swipe Up" then
-      currS.active.speed = -12
-    end
+    -- Игра
+    if currS.isVisible then
+      local prevCol = currS.active.col
+      if lastEvent == "Swipe Left" then
+        currS.active.col = (currS.active.col - 1 < 1) and 1 or currS.active.col - 1
+      elseif lastEvent == "Swipe Right" then
+        currS.active.col = (currS.active.col + 1 > 3) and 3 or currS.active.col + 1
+      elseif lastEvent == "Swipe Down" then
+        currS.active.speed = 12
+      elseif lastEvent == "Swipe Up" then
+        currS.active.speed = -12
+      end
 
-    currS.active.y = currS.active.y + (currS.active.speed * deltaMs * 20 / display.contentHeight)
+      currS.active.y = currS.active.y + (currS.active.speed * deltaMs / 25)
 
-    local nearBox = last(currS.static[currS.active.col])
-    local maxY = (nearBox and nearBox.y - (boxHeight + boxMarginY)) or ((fieldH / 2) - (boxHeight / 2 + boxMarginY))
-    if currS.active.y >= maxY then
-      -- Столкновение с другим боксом по горизонтали
-      if prevCol ~= currS.active.col then
-        currS.active.col = prevCol
-      -- Столкновение с другим боксом по вертикали
-      else
-        if not tasks.isSolved(nearBox, currS.active) then 
-          currS.lives = currS.lives - 1 
-        elseif nearBox then
-          table.remove(currS.static[nearBox.col], #currS.static[nearBox.col])
+      local nearBox = last(currS.static[currS.active.col])
+      local maxY = (nearBox and nearBox.y - (boxHeight + boxMarginY)) or ((fieldH / 2) - (boxHeight / 2 + boxMarginY))
+      if currS.active.y >= maxY then
+        -- Столкновение с другим боксом по горизонтали
+        if prevCol ~= currS.active.col then
+          currS.active.col = prevCol
+        -- Столкновение с другим боксом по вертикали
+        else
+          if not tasks.isSolved(nearBox, currS.active) then 
+            currS.lives = currS.lives - 1 
+          elseif nearBox then
+            table.remove(currS.static[nearBox.col], #currS.static[nearBox.col])
+          end
+          currS.active = nil
+        end
+      -- Улетел вверх
+      elseif currS.active.y < startY then
+        -- Проверяем, есть ли на поле правильно решение. Если есть, то игрок зря смахнул блок вверх. и мы отнимаем
+        -- у игрока жизнь
+        local b1, b2, b3 = last(currS.static[1]), last(currS.static[2]), last(currS.static[3]) 
+        if (tasks.isSolved(b1, currS.active) or tasks.isSolved(b2, currS.active) or tasks.isSolved(b3, currS.active)) then
+          currS.lives = currS.lives - 1
         end
         currS.active = nil
       end
-    -- Улетел вверх
-    elseif currS.active.y < startY then
-      -- Проверяем, есть ли на поле правильно решение. Если есть, то игрок зря смахнул блок вверх. и мы отнимаем
-      -- у игрока жизнь
-      local b1, b2, b3 = last(currS.static[1]), last(currS.static[2]), last(currS.static[3]) 
-      if (tasks.isSolved(b1, currS.active) or tasks.isSolved(b2, currS.active) or tasks.isSolved(b3, currS.active)) then
-        currS.lives = currS.lives - 1
+      
+      -- Проиграл
+      if currS.lives == 0 then
+        currS.isOver = true
+        currS.result = "lose"
       end
-      currS.active = nil
-    end
-    
-    -- Проиграл
-    if currS.lives == 0 then
-      currS.isOver = true
-      currS.result = "lose"
-    end
 
-    -- Победил, если поле осталось чистым
-    if (not last(currS.static[1])) and (not last(currS.static[2])) and (not last(currS.static[3])) then
-      currS.isOver = true
-      currS.result = "win"
+      -- Победил, если поле осталось чистым
+      if (not last(currS.static[1])) and (not last(currS.static[2])) and (not last(currS.static[3])) then
+        currS.isOver = true
+        currS.result = "win"
+      end
     end
   end
 
@@ -327,17 +332,17 @@ local function tick(event)
       end
     end
   end
-
-  -- Игра закончилась
-  if prevS.isOver == false and currS.isOver == true then
-    createOpacityBkg()
-    createGameOverWindow()
-  end
   
   -- Уменьшились жизни
   if prevS.lives > currS.lives then
     display.remove(livesGroup)
     createLivesGroup()
+  end
+
+  -- Игра закончилась
+  if prevS.isOver == false and currS.isOver == true then
+    createOpacityBkg()
+    createGameOverWindow()
   end
 
   -- Активный блок появился
@@ -347,7 +352,17 @@ local function tick(event)
 
   -- Активный блок исчез
   if prevS.active ~= nil and currS.active == nil then
+    -- В какой колонке был активный блок в момент исчезновения
+    local col = prevS.active.col
+    
     local activeBoxRToDelete = activeBoxR
+    -- Если блок летел вниз, то нужно приблизить его максимально близко к нижнему блоку
+    if prevS.active.speed > 0 then
+      local lowerBox = last(prevS.static[col])
+      local lowerBoxY = lowerBox and lowerBox.y or display.contentHeight
+      activeBoxRToDelete.y = lowerBoxY - boxHeight - boxMarginY
+    end
+
     transition.to(activeBoxRToDelete, {
       alpha = 0,
       time = 200,
@@ -356,8 +371,6 @@ local function tick(event)
       end
     })
 
-    -- В какой колонке был активный блок в момент исчезновения
-    local col = prevS.active.col
     -- При исчезновении уничтожил статический блок
     if #prevS.static[col] ~= #currS.static[col] then
       local staticBoxRToDelete = table.remove(staticBoxesR[col], #staticBoxesR[col])
@@ -409,18 +422,19 @@ end
 
 
 function scene:show(event)
-  if (event.phase == "did") then
+  if event.phase == "will" then
     inputReader.start()
     Runtime:addEventListener("enterFrame", tick)
+  elseif event.phase == "did" then
+    currS.isVisible = true
   end
 end
 
 
 function scene:hide(event) 
-  if (event.phase == "did") then
+  if event.phase == "will" then
     inputReader.stop()
     Runtime:removeEventListener("enterFrame", tick)
-    composer.removeScene("scenes.game")
   end
 end
 

@@ -33,7 +33,7 @@ local function createLvlBtn(lvl)
   else  -- Правый блок
     playBtnGroup.x = display.contentCenterX + 75
   end
-  playBtnGroup.y = ((math.floor(buttonsCount / 2) + 1) * 100) + (math.floor(buttonsCount / 2) * 25)
+  playBtnGroup.y = (math.floor(buttonsCount / 2) * 125) + 70
 
   scrollView:insert(playBtnGroup)
   playBtn:addEventListener("tap", function ()
@@ -63,7 +63,7 @@ function scene:create(event)
     createLvlBtn(lvl)
   end
 
-  scrollView:setScrollHeight(10 + (math.ceil(buttonsCount / 2) * 135))
+  scrollView:setScrollHeight((math.ceil(buttonsCount / 2) * 135) - 30 )
 end
 
 scene:addEventListener("create")

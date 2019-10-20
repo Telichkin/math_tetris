@@ -1,4 +1,4 @@
-local normalW, normalH = 320, 480
+local normalW, normalH = 320, 568
 
 if not display then return end -- This is needed for desktop app
 
@@ -11,9 +11,9 @@ w, h = w * scale, h * scale
 
 application = {
 	content = {
-		width = w,
-		height = h,
-		scale = 'letterbox',
+		width = normalW,
+		height = normalH,
+		scale = "letterbox",
 		fps = 60,
 		imageSuffix = {
 				--['@2x'] = 1.1,
