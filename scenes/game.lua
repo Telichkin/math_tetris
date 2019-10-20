@@ -265,7 +265,7 @@ local function tick(event)
       currS.active.speed = -12
     end
 
-    currS.active.y = currS.active.y + (currS.active.speed * deltaMs * 20 / display.height)
+    currS.active.y = currS.active.y + (currS.active.speed * deltaMs * 20 / display.contentHeight)
 
     local nearBox = last(currS.static[currS.active.col])
     local maxY = (nearBox and nearBox.y - (boxHeight + boxMarginY)) or ((fieldH / 2) - (boxHeight / 2 + boxMarginY))
