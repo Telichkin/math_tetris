@@ -12,7 +12,7 @@ local scrollView
 
 
 local function gotoGame()
-  composer.gotoScene("scenes.toGame")
+  composer.gotoScene("scenes.toGame", {time = 450, effect = "fromRight"})
 end
 
 

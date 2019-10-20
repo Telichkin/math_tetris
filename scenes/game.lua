@@ -69,7 +69,7 @@ local prevS = utils.deepCopy(currS)
 -- Вспомогательные функции --
 -----------------------------
 local function gotoMenu()
-  composer.gotoScene("scenes.menu")
+  composer.gotoScene("scenes.menu", {time = 500, effect = "slideRight"})
 end
 
 
