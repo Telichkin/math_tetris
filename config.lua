@@ -1,6 +1,6 @@
 local normalW, normalH = 320, 480
 
-if not display then return end -- This is needed for dekstop app
+if not display then return end -- This is needed for desktop app
 
 -- This calculation extends the standard letterbox scaling
 -- Using this point x = 0, y = 0 is always in the top left corner of the screen on all devices

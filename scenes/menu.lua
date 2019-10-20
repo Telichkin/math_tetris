@@ -3,6 +3,7 @@ local widget = require("widget")
 local utils = require("lib.utils")
 local state = require("lib.state")
 local levels = require("lib.levels")
+local sound = require("lib.sound")
 
 
 local scene = composer.newScene()
@@ -27,10 +28,9 @@ local function createLvlBtn(lvl)
   playBtnSubtitle:setFillColor(utils.rgb(0, 0, 0, 1))  
   playBtnSubtitle.y = 15
 
-  -- Левый блок
-  if math.fmod((buttonsCount + 1), 2) ~= 0 then
+  if math.fmod((buttonsCount + 1), 2) ~= 0 then  -- Левый блок
     playBtnGroup.x = display.contentCenterX - 75
-  else
+  else  -- Правый блок
     playBtnGroup.x = display.contentCenterX + 75
   end
   playBtnGroup.y = ((math.floor(buttonsCount / 2) + 1) * 100) + (math.floor(buttonsCount / 2) * 25)
@@ -38,6 +38,7 @@ local function createLvlBtn(lvl)
   scrollView:insert(playBtnGroup)
   playBtn:addEventListener("tap", function ()
     state.lvl = lvl
+    sound.play("tap")
     gotoGame()
   end)
 
@@ -53,6 +54,7 @@ function scene:create(event)
     y = display.contentCenterY,
     width = display.contentWidth,
     height = display.contentHeight,
+    horizontalScrollDisabled = true,
   })
 
   sceneGroup:insert(scrollView)
@@ -61,7 +63,7 @@ function scene:create(event)
     createLvlBtn(lvl)
   end
 
-  scrollView:setScrollHeight(10 + ((math.floor(buttonsCount / 2) + 1) * 135))
+  scrollView:setScrollHeight(10 + (math.ceil(buttonsCount / 2) * 135))
 end
 
 scene:addEventListener("create")

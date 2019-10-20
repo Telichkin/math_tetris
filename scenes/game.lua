@@ -3,6 +3,7 @@ local widget = require("widget")
 local tasks = require("lib.tasks")
 local utils = require("lib.utils")
 local state = require("lib.state")
+local sound = require("lib.sound")
 local inputReader = require("lib.inputReader")
 
 -- Основная проблема -- это синхронизация игрового состояния с состоянием UI
@@ -45,7 +46,7 @@ local lvlTasks, lvlNumbers = {}, {}
 local scene = composer.newScene()
 local gameGroup
 local mainGroup
-local gameOverGroup
+local gameOverWindow
 local livesGroup
 local activeBoxR
 local staticBoxesR = {{}, {}, {}}
@@ -89,27 +90,34 @@ local function createGameGroup()
   gameGroup = display.newContainer(fieldW, fieldH)
   gameGroup.x = display.contentCenterX
   gameGroup.y = display.contentCenterY
-  scene.view:insert(gameGroup)
+  mainGroup:insert(gameGroup)
   local background = display.newRoundedRect(gameGroup, 0, 0, gameGroup.width, gameGroup.height, 0)
   background:setFillColor(1, 1, 1)
 end
 
 
-local function createGameOverBackground()
-  gameOverGroup = display.newGroup()
-  gameOverGroup.x = display.contentCenterX
-  gameOverGroup.y = display.contentCenterY
-  local opacity = display.newRect(gameOverGroup, 0, 0, display.contentWidth, display.contentHeight)
+local function createOpacityBkg()
+  local opacity = display.newRect(
+    mainGroup, display.contentCenterX, display.contentCenterY, 
+    display.contentWidth, display.contentHeight
+  )
   opacity:setFillColor(utils.rgb(0, 0, 0, 0.5))
+end
+
+
+local function createGameOverWindow()
+  gameOverWindow = display.newGroup()
+  gameOverWindow.x = display.contentCenterX
+  -- gameOverWindow.y = display.contentCenterY
 
   local W, H = mainGroup.width * 0.85, mainGroup.height * 0.7
-  local background = display.newRect(gameOverGroup, 0, 0, W, H)
+  local background = display.newRect(gameOverWindow, 0, 0, W, H)
   background:setFillColor(utils.rgb(255, 255, 255, 1))
   background.strokeWidth = 4
   background:setStrokeColor(utils.rgb(149, 175, 237))
 
   local title = display.newText(
-    gameOverGroup, 
+    gameOverWindow, 
     currS.result == "win" and "Уровень пройден!" or "Попробуй ещё раз",
     0,
     - (H / 2) + 40,
@@ -118,7 +126,7 @@ local function createGameOverBackground()
   title:setFillColor(utils.rgb(0, 0, 0))
 
   local persona = display.newImage(
-    gameOverGroup,
+    gameOverWindow,
     "assets/images/" .. (currS.result == "win" and "win" or "lose") .. ".jpg",
     0, -30
   )
@@ -126,7 +134,7 @@ local function createGameOverBackground()
   persona.height = H * 0.36
   persona.width = persona.height / pH * pW
 
-  local toMenu = display.newText(gameOverGroup, "Меню", 0, persona.y + (persona.height / 2) + 35, mainFont, 27)
+  local toMenu = display.newText(gameOverWindow, "Меню", 0, persona.y + (persona.height / 2) + 35, mainFont, 27)
   toMenu:setFillColor(utils.rgb(0, 0, 0))
 
   toMenu:addEventListener("tap", gotoMenu)
@@ -149,8 +157,8 @@ local function createGameOverBackground()
   btnText:setFillColor(utils.rgb(0, 0, 0))
   btnGroup.x = 0
   btnGroup.y = (H / 2) - 50
-  gameOverGroup:insert(btnGroup)
-  scene.view:insert(gameOverGroup)
+  gameOverWindow:insert(btnGroup)
+  mainGroup:insert(gameOverWindow)
 
   btnGroup:addEventListener("tap", function ()
     if currS.result == "win" then
@@ -158,13 +166,14 @@ local function createGameOverBackground()
     end
     composer.gotoScene("scenes.toGame")
   end)
+
+  transition.to(gameOverWindow, {time = 1300, y = display.contentCenterY, transition = easing.outExpo})
 end
 
 
 local function createBox(b)
   box = display.newGroup()
   gameGroup:insert(box)
-  
   -- у нас три разных типа изображений блоков
   local name = "block-" .. tostring(math.random(3)) .. ".png"
   local shape = display.newImageRect(box, "assets/images/" .. name, boxWidth, boxHeight)
@@ -256,7 +265,7 @@ local function tick(event)
       currS.active.speed = -12
     end
 
-    currS.active.y = currS.active.y + (currS.active.speed * deltaMs * 20 / display.contentHeight)
+    currS.active.y = currS.active.y + (currS.active.speed * deltaMs * 20 / display.height)
 
     local nearBox = last(currS.static[currS.active.col])
     local maxY = (nearBox and nearBox.y - (boxHeight + boxMarginY)) or ((fieldH / 2) - (boxHeight / 2 + boxMarginY))
@@ -281,7 +290,6 @@ local function tick(event)
       if (tasks.isSolved(b1, currS.active) or tasks.isSolved(b2, currS.active) or tasks.isSolved(b3, currS.active)) then
         currS.lives = currS.lives - 1
       end
-      display.remove(currS.active.view)
       currS.active = nil
     end
     
@@ -301,7 +309,6 @@ local function tick(event)
   ---------------
   -- Рендеринг --
   ---------------
-  
   -- Если игра была только что проинициализирована, то можем создать все графические объекты:
   --  * игровое поле
   --  * статические блоки
@@ -323,7 +330,8 @@ local function tick(event)
 
   -- Игра закончилась
   if prevS.isOver == false and currS.isOver == true then
-    createGameOverBackground()
+    createOpacityBkg()
+    createGameOverWindow()
   end
   
   -- Уменьшились жизни
@@ -348,7 +356,7 @@ local function tick(event)
       end
     })
 
-    -- В какой колонке был активный бокс в момент исчезновения
+    -- В какой колонке был активный блок в момент исчезновения
     local col = prevS.active.col
     -- При исчезновении уничтожил статический блок
     if #prevS.static[col] ~= #currS.static[col] then
@@ -366,6 +374,36 @@ local function tick(event)
   if not currS.isOver and currS.active then
     activeBoxR.y = currS.active.y
     activeBoxR.x = boxXPositions[currS.active.col]
+  end
+
+  ----------
+  -- Звук --
+  ----------
+  -- Свайпнули активный блок
+  if prevS.active and currS.active then
+    if (prevS.active.col ~= currS.active.col) then  -- По-горизонтали
+      sound.play("swipe_2")
+    elseif (prevS.active.speed ~= currS.active.speed) then  -- По-вертикали
+      sound.play("swipe_1")
+    end
+  end
+
+  -- Активный блок исчез
+  if prevS.active ~= nil and currS.active == nil then
+    -- Столкнувшись с другим блоком по-вертикали (то есть не улетел вверх)
+    if prevS.active.y > (startY + 100) then
+      sound.play("impact")
+    end
+  end
+
+  -- Победа
+  if prevS.result ~= "win" and currS.result == "win" then
+    sound.play("win")
+  end
+
+  -- Поражение
+  if prevS.result ~= "lose" and currS.result == "lose" then
+    sound.play("lose")
   end
 end
 

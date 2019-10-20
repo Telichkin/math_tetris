@@ -99,4 +99,13 @@ return {
       {"number", "number", "       "},
     }
   },
+  {
+    name = "Тест",
+    level = 1,
+    task = "a + ? = b",
+    limit = 10,
+    scheme = {
+      {"", "task", ""},
+    }
+  }
 }
