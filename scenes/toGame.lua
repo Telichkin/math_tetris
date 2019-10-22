@@ -6,14 +6,17 @@ local scene = composer.newScene()
 
 
 function scene:create()
-  local background = display.newRect(self.view, display.contentCenterX, display.contentCenterY, display.contentWidth, display.contentHeight)
+  local background = display.newRect(
+    self.view, display.contentCenterX, display.contentCenterY, 
+    display.actualContentWidth, display.actualContentHeight
+  )
   background:setFillColor(utils.rgb(255, 255, 255)) 
 
-  local ball = display.newImageRect(self.view, 'assets/images/clock.png', 54, 140)
-  ball.x = display.contentCenterX
-  ball.y = display.contentCenterY
+  local clock = display.newImageRect(self.view, 'assets/images/clock.png', 54, 140)
+  clock.x = display.contentCenterX
+  clock.y = display.contentCenterY
 
-  transition.to(ball, {time = 1500, rotation = 360, delta = true, iterations = -1})
+  transition.to(clock, {time = 1500, rotation = 360, delta = true, iterations = -1})
 end
 
 

@@ -8,6 +8,8 @@ local sound = require("lib.sound")
 
 local scene = composer.newScene()
 local buttonsCount = 0
+local deltaY = (display.actualContentHeight - display.contentHeight) / 2
+local deltaX = (display.actualContentWidth - display.contentWidth) / 2
 local scrollView
 
 
@@ -29,11 +31,11 @@ local function createLvlBtn(lvl)
   playBtnSubtitle.y = 15
 
   if math.fmod((buttonsCount + 1), 2) ~= 0 then  -- Левый блок
-    playBtnGroup.x = display.contentCenterX - 75
+    playBtnGroup.x = deltaX + display.contentCenterX - 75
   else  -- Правый блок
-    playBtnGroup.x = display.contentCenterX + 75
+    playBtnGroup.x = deltaX + display.contentCenterX + 75
   end
-  playBtnGroup.y = (math.floor(buttonsCount / 2) * 125) + 70
+  playBtnGroup.y = deltaY + (math.floor(buttonsCount / 2) * 125) + 70
 
   scrollView:insert(playBtnGroup)
   playBtn:addEventListener("tap", function ()
@@ -52,18 +54,17 @@ function scene:create(event)
   scrollView = widget.newScrollView({
     x = display.contentCenterX,
     y = display.contentCenterY,
-    width = display.contentWidth,
-    height = display.contentHeight,
+    width = display.actualContentWidth,
+    height = display.actualContentHeight,
     horizontalScrollDisabled = true,
   })
-
   sceneGroup:insert(scrollView)
 
   for i, lvl in pairs(levels) do
     createLvlBtn(lvl)
   end
 
-  scrollView:setScrollHeight((math.ceil(buttonsCount / 2) * 135) - 30 )
+  scrollView:setScrollHeight(deltaY + (math.ceil(buttonsCount / 2) * 135) - 30)
 end
 
 scene:addEventListener("create")

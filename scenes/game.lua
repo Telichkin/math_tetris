@@ -6,13 +6,6 @@ local state = require("lib.state")
 local sound = require("lib.sound")
 local inputReader = require("lib.inputReader")
 
--- Основная проблема -- это синхронизация игрового состояния с состоянием UI
--- и игровых объектов. Corona -- это retain mode SDK со всеми вытекающими.
--- Решить проблему синхронизации можно путем сохранения двух состояний:
--- предыдущего и текущего и внесения изменений в игровые объекты и UI на
--- основании анализа этих двух состояний
-
-
 ------------------
 -- Конфигурация --
 ------------------
@@ -36,6 +29,9 @@ local heartH = (display.contentHeight - fieldH) * 0.5 * 0.6
 local heartStartX = display.contentCenterX - (fieldW / 2) + (heartH / 2)
 local heartStartY = display.contentCenterY - (display.contentHeight / 2) + ((display.contentHeight - fieldH) / 4)
 
+local modalW = display.contentWidth * 0.85
+local modalH = display.contentHeight * 0.6
+
 local maxLives = 3
 local maxPositionY = {display.contentHeight, display.contentHeight, display.contentHeight}
 local lvlTasks, lvlNumbers = {}, {}
@@ -46,10 +42,13 @@ local lvlTasks, lvlNumbers = {}, {}
 local scene = composer.newScene()
 local gameGroup
 local mainGroup
-local gameOverWindow
+local modalWindow
+local opacityGroup
 local livesGroup
 local activeBoxR
 local staticBoxesR = {{}, {}, {}}
+
+local uiEvent
 
 -------------------------------
 -- Глобальное состояние игры --
@@ -58,6 +57,7 @@ local currS = {
   inited = false,
   isOver = false,
   isVisible = false,
+  isPaused = false,
   result = "idle",
   lives = maxLives,
   -- boxes
@@ -77,7 +77,10 @@ end
 local function createMainGroup()
   mainGroup = display.newGroup()
   scene.view:insert(mainGroup)
-  local background = display.newRect(mainGroup, display.contentCenterX, display.contentCenterY, display.contentWidth, display.contentHeight)
+  local background = display.newRect(
+    mainGroup, display.contentCenterX, display.contentCenterY, 
+    display.actualContentWidth, display.actualContentHeight
+  )
   background:setFillColor(utils.rgb(97, 134, 232, 1))
 end
 
@@ -87,91 +90,97 @@ local function createGameGroup()
   gameGroup.x = display.contentCenterX
   gameGroup.y = display.contentCenterY
   mainGroup:insert(gameGroup)
-  local background = display.newRoundedRect(gameGroup, 0, 0, gameGroup.width, gameGroup.height, 0)
+  local background = display.newRect(gameGroup, 0, 0, gameGroup.width, gameGroup.height)
   background:setFillColor(1, 1, 1)
 end
 
 
-local function createOpacityBkg()
-  local opacity = display.newRect(
-    mainGroup, display.contentCenterX, display.contentCenterY, 
-    display.contentWidth, display.contentHeight
-  )
-  opacity:setFillColor(utils.rgb(0, 0, 0, 0.5))
+local function createBackBtn()
+  local btn = display.newGroup()
+  btn.x = display.contentCenterX
+  btn.y = display.contentCenterY + ((display.actualContentHeight - fieldH) / 4) + (fieldH / 2)
+
+  local shape = display.newRect(btn, 0, 0, 100, 30)
+  shape:setFillColor(0, 0, 0, 0)
+  shape.strokeWidth = 2
+  shape:setStrokeColor(1, 1, 1, 1)
+
+  display.newText(btn, "назад", 0, 0, mainFont, 25)
+  mainGroup:insert(btn)
+
+  btn:addEventListener("tap", function ()
+    uiEvent = "Back"
+  end)
 end
 
 
-local function createGameOverWindow()
-  gameOverWindow = display.newGroup()
-  gameOverWindow.x = display.contentCenterX
+local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
+  opacityGroup = display.newRect(
+    display.contentCenterX, display.contentCenterY, 
+    display.actualContentWidth, display.actualContentHeight
+  )
+  opacityGroup:setFillColor(0, 0, 0, 0.5)
+  mainGroup:insert(opacityGroup)
 
-  local W, H = mainGroup.width * 0.85, mainGroup.height * 0.6
-  local background = display.newRect(gameOverWindow, 0, 0, W, H)
+  modalWindow = display.newGroup()
+  modalWindow.x = display.contentCenterX
+
+  local background = display.newRect(modalWindow, 0, 0, modalW, modalH)
   background:setFillColor(utils.rgb(255, 255, 255, 1))
   background.strokeWidth = 4
   background:setStrokeColor(utils.rgb(149, 175, 237))
 
   local title = display.newText(
-    gameOverWindow, 
-    currS.result == "win" and "Уровень пройден!" or "Попробуй ещё раз",
-    0,
-    -(H / 2) + 40,
-    mainFont, 27
+    modalWindow, titleText,
+    0, -(modalH / 2) + 40,
+    mainFont, 25
   )
   title:setFillColor(utils.rgb(0, 0, 0))
 
-  local persona = display.newImage(
-    gameOverWindow,
-    "assets/images/" .. (currS.result == "win" and "win" or "lose") .. ".jpg",
-    0, -30
-  )
+  local persona = display.newImage(modalWindow, "assets/images/" .. personaImg, 0, -30)
   local pW, pH = persona.width, persona.height
-  persona.height = H * 0.36
+  persona.height = modalH * 0.36
   persona.width = persona.height / pH * pW
 
-  local toMenu = display.newText(gameOverWindow, "Меню", 0, persona.y + (persona.height / 2) + 35, mainFont, 21)
+  local toMenu = display.newText(
+    modalWindow, secondaryBtn[1], 
+    0, persona.y + (persona.height / 2) + 25, 
+    mainFont, 21)
   toMenu:setFillColor(utils.rgb(0, 0, 0))
 
-  toMenu:addEventListener("tap", function ()
-    composer.gotoScene("scenes.menu", {time = 500, effect = "fromLeft"})
-  end)
+  toMenu:addEventListener("tap", secondaryBtn[2])
 
   local btnGroup = display.newGroup()
-  local btn = display.newRect(btnGroup, 0, 0, W * 0.6, 70)
+  local btn = display.newRect(btnGroup, 0, 0, modalW * 0.6, 70)
   btn:setFillColor(utils.rgb(255, 255, 255))
   btn.strokeWidth = 3
   btn:setStrokeColor(utils.rgb(56, 102, 204))
 
   local btnText = display.newText({
     parent = btnGroup, 
-    text = currS.result == "win" and "Следующий\nуровень" or "Играть\nснова", 
+    text = mainBtn[1], 
     x = 0, 
     y = 0, 
     font = mainFont, 
-    fontSize = 26,
+    fontSize = 25,
     align = "center",
   })
   btnText:setFillColor(utils.rgb(0, 0, 0))
   btnGroup.x = 0
-  btnGroup.y = (H / 2) - 50
-  gameOverWindow:insert(btnGroup)
-  mainGroup:insert(gameOverWindow)
+  btnGroup.y = (modalH / 2) - 50
+  modalWindow:insert(btnGroup)
+  mainGroup:insert(modalWindow)
 
-  btnGroup:addEventListener("tap", function ()
-    if currS.result == "win" then
-      state.lvl = utils.nextLvl(state.lvl)
-    end
-    composer.gotoScene("scenes.toGame")
-  end)
+  btnGroup:addEventListener("tap", mainBtn[2])
 
-  transition.to(gameOverWindow, {time = 1300, y = display.contentCenterY, transition = easing.outExpo})
+  transition.to(modalWindow, {time = 1300, y = display.contentCenterY, transition = easing.outExpo})
 end
 
 
 local function createBox(b)
   box = display.newGroup()
   gameGroup:insert(box)
-  -- У нас три разных типа изображений блоков
+  -- У нас 14 разных типа изображений блоков
   local name = "block-" .. tostring(math.random(14)) .. ".png"
   local shape = display.newImageRect(box, "assets/images/" .. name, boxWidth, boxHeight)
   
@@ -212,20 +221,26 @@ local function tick(event)
   local deltaMs = ms - lastTickMs
   lastTickMs = ms
 
+  -----------------------------------
+  -- Сохранение прошлого состояния --
+  -----------------------------------
+  prevS = utils.deepCopy(currS)
+
   --------------------
   -- Чтение инпута  --
   --------------------
   local lastEvent = inputReader.getLastEvent()
-  
-  ---------------------------------
-  -- Сохраняем прошлое состояние --
-  ---------------------------------
-  prevS = utils.deepCopy(currS)
 
   --------------------------
   -- Обновление состояния --
   --------------------------
-  if not currS.isOver then
+  if uiEvent == "Back" then
+    currS.isPaused = true
+  elseif uiEvent == "Continue" then
+    currS.isPaused = false
+  end
+
+  if currS.isOver == false and currS.isPaused == false then
     -- Инициализация
     if not currS.inited then
       lvlTasks, lvlNumbers = tasks.generate(state.lvl.task, state.lvl.limit)
@@ -309,6 +324,8 @@ local function tick(event)
         currS.result = "win"
       end
     end
+
+    uiEvent = nil
   end
 
   ---------------
@@ -323,6 +340,7 @@ local function tick(event)
   -- Эти объекты не будут пересоздаваться на каждом кадре
   if prevS.inited == false and currS.inited == true then
     createMainGroup()
+    createBackBtn()
     createGameGroup()
     createLivesGroup()
     activeBoxR = createBox(currS.active)
@@ -339,10 +357,52 @@ local function tick(event)
     createLivesGroup()
   end
 
-  -- Игра закончилась
-  if prevS.isOver == false and currS.isOver == true then
-    createOpacityBkg()
-    createGameOverWindow()
+  -- Хочет выйти
+  if prevS.isPaused == false and currS.isPaused == true then
+    createModalWindow(
+      "Хочешь выйти из игры?",
+      "exit.png",
+      {"Выйти", function ()
+        composer.gotoScene("scenes.menu", {time = 500, effect = "fromLeft"})
+      end},
+      {"Продолжить\nигру", function ()
+        local mY = - (modalH / 2) - ((display.actualContentHeight - display.contentHeight) / 2)
+        transition.to(modalWindow, {time = 1000, y = mY , transition = easing.inSine, onComplete = function ()
+          uiEvent = "Continue"
+          display.remove(opacityGroup)
+          display.remove(modalWindow)
+        end})
+      end}
+    )
+  end
+
+  -- Победа
+  if prevS.result ~= "win" and currS.result == "win" then
+    createModalWindow(
+      "Уровень пройден!", 
+      "win.jpg",
+      {"Меню", function ()
+        composer.gotoScene("scenes.menu", {time = 500, effect = "fromLeft"})
+      end},
+      {"Следующий\nуровень", function ()
+        state.lvl = utils.nextLvl(state.lvl)
+        composer.gotoScene("scenes.toGame")
+      end}
+    )
+  end
+
+  -- Поражение
+  if prevS.result ~= "lose" and currS.result == "lose" then
+    createModalWindow(
+      "Попробуй ещё раз", 
+      "lose.jpg",
+      {"Меню", function ()
+        composer.gotoScene("scenes.menu", {time = 500, effect = "fromLeft"})
+      end},
+      {"Играть\nснова", function ()
+        composer.gotoScene("scenes.toGame")
+      end}
+    )
   end
 
   -- Активный блок появился
@@ -404,7 +464,7 @@ local function tick(event)
   -- Активный блок исчез
   if prevS.active ~= nil and currS.active == nil then
     -- Столкнувшись с другим блоком по-вертикали (то есть не улетел вверх)
-    if prevS.active.y > (startY + 100) then
+    if prevS.active.speed > 0 then
       sound.play("impact")
     end
   end
@@ -426,7 +486,7 @@ function scene:show(event)
     inputReader.start()
     Runtime:addEventListener("enterFrame", tick)
   elseif event.phase == "did" then
-    currS.isVisible = true
+    timer.performWithDelay(500, function () currS.isVisible = true end)
   end
 end
 
