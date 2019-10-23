@@ -9,7 +9,7 @@ local sounds = {
   swipe_2 = "assets/sounds/poof.wav",
   impact = "assets/sounds/impact.wav",
   lose = "assets/sounds/lose.wav",
-  win = "assets/sounds/win.wav",
+  win = "assets/sounds/win_2.wav",
 }
 
 

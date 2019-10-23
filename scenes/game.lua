@@ -31,6 +31,7 @@ local heartStartY = display.contentCenterY - (display.contentHeight / 2) + ((dis
 
 local modalW = display.contentWidth * 0.85
 local modalH = display.contentHeight * 0.6
+local modalStartY = - (modalH / 2) - ((display.actualContentHeight - display.contentHeight) / 2)
 
 local maxLives = 3
 local maxPositionY = {display.contentHeight, display.contentHeight, display.contentHeight}
@@ -54,7 +55,7 @@ local uiEvent
 -- Глобальное состояние игры --
 -------------------------------
 local currS = {
-  inited = false,
+  isInited = false,
   isOver = false,
   isVisible = false,
   isPaused = false,
@@ -101,7 +102,7 @@ local function createBackBtn()
   btn.y = display.contentCenterY + ((display.actualContentHeight - fieldH) / 4) + (fieldH / 2)
 
   local shape = display.newRect(btn, 0, 0, 100, 30)
-  shape:setFillColor(0, 0, 0, 0)
+  shape:setFillColor(utils.rgb(97, 134, 232, 1))
   shape.strokeWidth = 2
   shape:setStrokeColor(1, 1, 1, 1)
 
@@ -119,11 +120,13 @@ local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
     display.contentCenterX, display.contentCenterY, 
     display.actualContentWidth, display.actualContentHeight
   )
-  opacityGroup:setFillColor(0, 0, 0, 0.5)
+  opacityGroup:setFillColor(0, 0, 0)
+  opacityGroup.alpha = 0
   mainGroup:insert(opacityGroup)
 
   modalWindow = display.newGroup()
   modalWindow.x = display.contentCenterX
+  modalWindow.y = modalStartY
 
   local background = display.newRect(modalWindow, 0, 0, modalW, modalH)
   background:setFillColor(utils.rgb(255, 255, 255, 1))
@@ -172,8 +175,10 @@ local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
   mainGroup:insert(modalWindow)
 
   btnGroup:addEventListener("tap", mainBtn[2])
+  opacityGroup:addEventListener("tap", function () return true end)
 
-  transition.to(modalWindow, {time = 1300, y = display.contentCenterY, transition = easing.outExpo})
+  transition.to(modalWindow, {time = 1200, y = display.contentCenterY, transition = easing.outExpo})
+  transition.to(opacityGroup, {time = 500, alpha = 0.5})
 end
 
 
@@ -215,7 +220,7 @@ end
 local lastTickMs = 0
 local function tick(event)
   -- Сколько прошло с предыдущего тика
-  if not currS.inited then lastTickMs = event.time end
+  if not currS.isInited then lastTickMs = event.time end
 
   local ms = event.time
   local deltaMs = ms - lastTickMs
@@ -242,7 +247,7 @@ local function tick(event)
 
   if currS.isOver == false and currS.isPaused == false then
     -- Инициализация
-    if not currS.inited then
+    if currS.isInited == false then
       lvlTasks, lvlNumbers = tasks.generate(state.lvl.task, state.lvl.limit)
       local scheme = state.lvl.scheme
 
@@ -259,7 +264,7 @@ local function tick(event)
           end
         end
       end
-      currS.inited = true
+      currS.isInited = true
     end
 
     if currS.active == nil then
@@ -272,7 +277,7 @@ local function tick(event)
     end
 
     -- Игра
-    if currS.isVisible then
+    if currS.isVisible == true then
       local prevCol = currS.active.col
       if lastEvent == "Swipe Left" then
         currS.active.col = (currS.active.col - 1 < 1) and 1 or currS.active.col - 1
@@ -338,7 +343,7 @@ local function tick(event)
   --  * жизни
   -- 
   -- Эти объекты не будут пересоздаваться на каждом кадре
-  if prevS.inited == false and currS.inited == true then
+  if prevS.isInited == false and currS.isInited == true then
     createMainGroup()
     createBackBtn()
     createGameGroup()
@@ -363,14 +368,15 @@ local function tick(event)
       "Хочешь выйти из игры?",
       "exit.png",
       {"Выйти", function ()
-        composer.gotoScene("scenes.menu", {time = 500, effect = "fromLeft"})
+        composer.gotoScene("scenes.levels", {time = 500, effect = "fromLeft"})
       end},
       {"Продолжить\nигру", function ()
-        local mY = - (modalH / 2) - ((display.actualContentHeight - display.contentHeight) / 2)
-        transition.to(modalWindow, {time = 1000, y = mY , transition = easing.inSine, onComplete = function ()
-          uiEvent = "Continue"
-          display.remove(opacityGroup)
+        transition.to(modalWindow, {time = 500, y = modalStartY, transition = easing.inSine, onComplete = function ()
           display.remove(modalWindow)
+        end})
+        transition.fadeOut(opacityGroup, {time = 500, onComplete = function ()
+          display.remove(opacityGroup)
+          uiEvent = "Continue"
         end})
       end}
     )
@@ -382,11 +388,11 @@ local function tick(event)
       "Уровень пройден!", 
       "win.jpg",
       {"Меню", function ()
-        composer.gotoScene("scenes.menu", {time = 500, effect = "fromLeft"})
+        composer.gotoScene("scenes.levels", {time = 500, effect = "fromLeft"})
       end},
       {"Следующий\nуровень", function ()
         state.lvl = utils.nextLvl(state.lvl)
-        composer.gotoScene("scenes.toGame")
+        composer.gotoScene("scenes.loading")
       end}
     )
   end
@@ -397,10 +403,10 @@ local function tick(event)
       "Попробуй ещё раз", 
       "lose.jpg",
       {"Меню", function ()
-        composer.gotoScene("scenes.menu", {time = 500, effect = "fromLeft"})
+        composer.gotoScene("scenes.levels", {time = 500, effect = "fromLeft"})
       end},
       {"Играть\nснова", function ()
-        composer.gotoScene("scenes.toGame")
+        composer.gotoScene("scenes.loading")
       end}
     )
   end
@@ -483,9 +489,9 @@ end
 
 function scene:show(event)
   if event.phase == "will" then
-    inputReader.start()
-    Runtime:addEventListener("enterFrame", tick)
+    tick({time = 0})  -- Инициализируем состояние в первом тике
   elseif event.phase == "did" then
+    Runtime:addEventListener("enterFrame", tick)
     timer.performWithDelay(500, function () currS.isVisible = true end)
   end
 end
@@ -493,8 +499,8 @@ end
 
 function scene:hide(event) 
   if event.phase == "will" then
-    inputReader.stop()
     Runtime:removeEventListener("enterFrame", tick)
+    composer.removeScene("scenes.game")
   end
 end
 
