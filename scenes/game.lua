@@ -111,6 +111,7 @@ local function createBackBtn()
 
   btn:addEventListener("tap", function ()
     uiEvent = "Back"
+    sound.play("tap")
   end)
 end
 
@@ -151,7 +152,10 @@ local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
     mainFont, 21)
   toMenu:setFillColor(utils.rgb(0, 0, 0))
 
-  toMenu:addEventListener("tap", secondaryBtn[2])
+  toMenu:addEventListener("tap", function ()
+    secondaryBtn[2]()
+    sound.play("tap")
+  end)
 
   local btnGroup = display.newGroup()
   local btn = display.newRect(btnGroup, 0, 0, modalW * 0.6, 70)
@@ -174,7 +178,10 @@ local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
   modalWindow:insert(btnGroup)
   mainGroup:insert(modalWindow)
 
-  btnGroup:addEventListener("tap", mainBtn[2])
+  btnGroup:addEventListener("tap", function ()
+    mainBtn[2]()
+    sound.play("tap")
+  end)
   opacityGroup:addEventListener("tap", function () return true end)
 
   transition.to(modalWindow, {time = 1200, y = display.contentCenterY, transition = easing.outExpo})
@@ -368,7 +375,7 @@ local function tick(event)
       "Хочешь выйти из игры?",
       "exit.png",
       {"Выйти", function ()
-        composer.gotoScene("scenes.levels", {time = 500, effect = "fromLeft"})
+        composer.gotoScene("scenes.levels", {time = 450, effect = "slideRight"})
       end},
       {"Продолжить\nигру", function ()
         transition.to(modalWindow, {time = 500, y = modalStartY, transition = easing.inSine, onComplete = function ()
@@ -388,7 +395,7 @@ local function tick(event)
       "Уровень пройден!", 
       "win.jpg",
       {"Меню", function ()
-        composer.gotoScene("scenes.levels", {time = 500, effect = "fromLeft"})
+        composer.gotoScene("scenes.levels", {time = 450, effect = "slideRight"})
       end},
       {"Следующий\nуровень", function ()
         state.lvl = utils.nextLvl(state.lvl)
@@ -403,7 +410,7 @@ local function tick(event)
       "Попробуй ещё раз", 
       "lose.jpg",
       {"Меню", function ()
-        composer.gotoScene("scenes.levels", {time = 500, effect = "fromLeft"})
+        composer.gotoScene("scenes.levels", {time = 450, effect = "slideRight"})
       end},
       {"Играть\nснова", function ()
         composer.gotoScene("scenes.loading")

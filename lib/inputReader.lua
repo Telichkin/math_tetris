@@ -7,7 +7,7 @@ function readInput(event)
   local xDiff = event.x - event.xStart
   local yDiff = event.y - event.yStart
 
-  if ((phase == "ended" or phase == "cancelled")) then
+  if phase == "ended" or phase == "cancelled" then
     if xDiff < -30 then 
       lastEvent = "Swipe Left"
     elseif xDiff > 30 then 

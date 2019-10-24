@@ -14,7 +14,34 @@ local scrollView
 
 
 local function gotoGame()
-  composer.gotoScene("scenes.loading", {time = 450, effect = "fromRight"})
+  composer.gotoScene("scenes.loading", {time = 450, effect = "slideLeft"})
+end
+
+
+local function createBackBtn()
+  local footerGroup = display.newGroup()
+  footerGroup.x = display.contentCenterX
+  footerGroup.y = display.contentCenterY + ((display.actualContentHeight - 45) / 2)
+  footerGroup:addEventListener("tap", function () return true end)  -- blocks events propagation
+
+  local bkg = display.newRect(footerGroup, 0, 0, display.actualContentWidth, 45)
+  bkg:setFillColor(utils.rgb(50, 97, 215, 0.75))
+
+  local btnGroup = display.newGroup()
+  local btn = display.newRect(btnGroup, 0, 0, 100, 30)
+  btn:setFillColor(utils.rgb(97, 134, 232, 1))
+  btn.strokeWidth = 2
+  btn:setStrokeColor(1, 1, 1, 1)
+  display.newText(btnGroup, "назад", 0, 0, "assets/Neucha-Regular", 25)
+
+  btnGroup:addEventListener("tap", function ()
+    sound.play("tap")
+    composer.gotoScene("scenes.menu", {time = 450, effect = "slideRight"})
+    return true
+  end)
+
+  footerGroup:insert(btnGroup)
+  scene.view:insert(footerGroup)
 end
 
 
@@ -60,11 +87,12 @@ function scene:create(event)
   })
   sceneGroup:insert(scrollView)
 
+  createBackBtn()
   for i, lvl in pairs(levels) do
     createLvlBtn(lvl)
   end
 
-  scrollView:setScrollHeight(deltaY + (math.ceil(buttonsCount / 2) * 135) - 30)
+  scrollView:setScrollHeight(deltaY + (math.ceil(buttonsCount / 2) * 135))
 end
 
 scene:addEventListener("create")

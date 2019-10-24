@@ -6,4 +6,4 @@ math.randomseed(os.time())
 composer.recycleOnSceneChange = true 
 inputReader.start()
 
-composer.gotoScene("scenes.levels")
+composer.gotoScene("scenes.menu")
