@@ -256,11 +256,24 @@ local function tick(event)
     -- Инициализация
     if currS.isInited == false then
       lvlTasks, lvlNumbers = tasks.generate(state.lvl.task, state.lvl.limit)
-      local scheme = state.lvl.scheme
+      -- local scheme = state.lvl.scheme
+      -- Процедурная генерация схемы уровня
+      local scheme = {{}, {}, {}}
+      for i = 1, state.lvl.tasksN do
+        local col = math.random(#scheme)
+        -- Не должно быть перепада по высоте больше, чем на 2 блока
+        while ((#scheme[col] - #scheme[1]) >= 2) or ((#scheme[col] - #scheme[2]) >= 2) or ((#scheme[col] - #scheme[3]) >= 2) do
+          col = col + 1
+          if col > 3 then
+            col = 1
+          end
+        end
+        table.insert(scheme[col], state.lvl.tasksType)
+      end
 
-      for row = 1, #scheme do
-        for col = 1, 3 do
-          local type = scheme[row][col]
+      for col = 1, 3 do
+        for row = 1, #scheme[col] do
+          local type = scheme[col][row]
           if type == "task" or type == "number" then
             currS.static[col][row] = {
               col = col,
