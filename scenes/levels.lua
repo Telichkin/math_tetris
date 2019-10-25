@@ -4,6 +4,7 @@ local utils = require("lib.utils")
 local state = require("lib.state")
 local levels = require("lib.levels")
 local sound = require("lib.sound")
+local saver = require("lib.saver")
 
 
 local scene = composer.newScene()
@@ -45,17 +46,24 @@ local function createBackBtn()
 end
 
 
-local function createLvlBtn(lvl) 
+local function createLvlBtn(lvl, unlocked) 
   local playBtnGroup = display.newGroup()
-  local playBtn = display.newImageRect(playBtnGroup, "assets/images/lvl-unlocked.png", 138, 114)
+  local img = "assets/images/lvl-" .. (unlocked and "unlocked" or "locked") .. ".png"
+  local playBtn = display.newImageRect(playBtnGroup, img, 138, 114)
 
-  local playBtnTitle = display.newText(playBtnGroup, lvl.name, 0, 0, "assets/Neucha-Regular", 20)
-  playBtnTitle:setFillColor(utils.rgb(0, 0, 0, 1))
-  playBtnTitle.y = -15
+  if unlocked then
+    local playBtnTitle = display.newText(playBtnGroup, lvl.name, 0, 0, "assets/Neucha-Regular", 20)
+    playBtnTitle:setFillColor(utils.rgb(0, 0, 0, 1))
+    playBtnTitle.y = -15
 
-  local playBtnSubtitle = display.newText(playBtnGroup, "Уровень " .. tostring(lvl.level), 0, 0, "assets/Neucha-Regular", 20)
-  playBtnSubtitle:setFillColor(utils.rgb(0, 0, 0, 1))  
-  playBtnSubtitle.y = 15
+    local playBtnSubtitle = display.newText(playBtnGroup, "Уровень " .. tostring(lvl.level), 0, 0, "assets/Neucha-Regular", 20)
+    playBtnSubtitle:setFillColor(utils.rgb(0, 0, 0, 1))  
+    playBtnSubtitle.y = 15
+  else
+    local lockImg = display.newImage(playBtnGroup, "assets/images/lock-icon.png", 0, 0)
+    lockImg.height = 72
+    lockImg.width = 72
+  end
 
   if math.fmod((buttonsCount + 1), 2) ~= 0 then  -- Левый блок
     playBtnGroup.x = deltaX + display.contentCenterX - 75
@@ -66,9 +74,11 @@ local function createLvlBtn(lvl)
 
   scrollView:insert(playBtnGroup)
   playBtn:addEventListener("tap", function ()
-    state.lvl = lvl
+    if unlocked then
+      state.lvl = lvl
+      gotoGame()
+    end
     sound.play("tap")
-    gotoGame()
   end)
 
   buttonsCount = buttonsCount + 1
@@ -76,6 +86,7 @@ end
 
 
 function scene:create(event)
+  -- Создание сцены
   local sceneGroup = self.view
 
   scrollView = widget.newScrollView({
@@ -88,8 +99,9 @@ function scene:create(event)
   sceneGroup:insert(scrollView)
 
   createBackBtn()
+  local lastLvlIndex = saver.lastLvlIndex()
   for i, lvl in pairs(levels) do
-    createLvlBtn(lvl)
+    createLvlBtn(lvl, i <= lastLvlIndex)
   end
 
   scrollView:setScrollHeight(deltaY + (math.ceil(buttonsCount / 2) * 135))

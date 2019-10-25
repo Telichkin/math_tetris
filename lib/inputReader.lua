@@ -8,13 +8,13 @@ function readInput(event)
   local yDiff = event.y - event.yStart
 
   if phase == "ended" or phase == "cancelled" then
-    if xDiff < -30 then 
+    if xDiff < -25 then 
       lastEvent = "Swipe Left"
-    elseif xDiff > 30 then 
+    elseif xDiff > 25 then 
       lastEvent = "Swipe Right" 
-    elseif yDiff > 30 then
+    elseif yDiff > 25 then
       lastEvent = "Swipe Down"
-    elseif yDiff < -30 then
+    elseif yDiff < -25 then
       lastEvent = "Swipe Up"
     end
   end

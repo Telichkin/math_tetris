@@ -60,7 +60,7 @@ local function createBackBtn()
 end
 
 
-function scene:create(event)
+function scene:create(event)  
   local background = display.newRect(
     scene.view, display.contentCenterX, display.contentCenterY, 
     display.actualContentWidth, display.actualContentHeight

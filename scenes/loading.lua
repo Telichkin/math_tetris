@@ -1,11 +1,16 @@
 local composer = require("composer")
 local utils = require("lib.utils")
+local state = require("lib.state")
+local tasks = require("lib.tasks")
 
 
 local scene = composer.newScene()
 
 
 function scene:create(event)
+  state.lvl.lvlTasks, state.lvl.lvlNumbers = tasks.generate(state.lvl.task, state.lvl.limit)
+  state.lvl.scheme = tasks.generateScheme(state.lvl.tasksN, state.lvl.tasksType)
+  
   local background = display.newRect(
     self.view, display.contentCenterX, display.contentCenterY, 
     display.actualContentWidth, display.actualContentHeight

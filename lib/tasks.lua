@@ -287,4 +287,20 @@ function M.generate(task, limit)
   return init(generate[task](limit))
 end
 
+function M.generateScheme(tasksN, tasksType)
+  local scheme = {{}, {}, {}}
+  for i = 1, tasksN do
+    local col = math.random(#scheme)
+    -- Не должно быть перепада по высоте больше, чем на 2 блока
+    while ((#scheme[col] - #scheme[1]) >= 2) or ((#scheme[col] - #scheme[2]) >= 2) or ((#scheme[col] - #scheme[3]) >= 2) do
+      col = col + 1
+      if col > 3 then
+        col = 1
+      end
+    end
+    table.insert(scheme[col], tasksType)
+  end
+  return scheme
+end
+
 return M
