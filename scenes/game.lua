@@ -5,7 +5,6 @@ local utils = require("lib.utils")
 local state = require("lib.state")
 local sound = require("lib.sound")
 local inputReader = require("lib.inputReader")
-local saver = require("lib.saver")
 
 
 ------------------
@@ -37,6 +36,8 @@ local modalStartY = - (modalH / 2) - ((display.actualContentHeight - display.con
 
 local maxLives = 3
 local maxPositionY = {display.contentHeight, display.contentHeight, display.contentHeight}
+
+local lvlTasks, lvlNumbers, scheme = state.selectedLvl.lvlTasks, state.selectedLvl.lvlNumbers, state.selectedLvl.scheme
 
 ----------------------------------
 -- Глобальное состояние рендера --
@@ -252,11 +253,7 @@ local function tick(event)
     currS.isPaused = false
   end
 
-  local lvlTasks, lvlNumbers = state.lvl.lvlTasks, state.lvl.lvlNumbers
-  local scheme = state.lvl.scheme
-  local lazyLoaded = lvlTasks ~= nil and lvlNumbers ~= nil and scheme ~= nil
-
-  if currS.result == nil and currS.isPaused == false and lazyLoaded == true then
+  if currS.result == nil and currS.isPaused == false then
     -- Инициализация
     if currS.isInited == false then
       for col = 1, 3 do
@@ -333,6 +330,7 @@ local function tick(event)
       -- Победил, если поле осталось чистым
       if (not last(currS.static[1])) and (not last(currS.static[2])) and (not last(currS.static[3])) then
         currS.result = "win"
+        state.unlockNextLvl()
       end
     end
 
@@ -397,7 +395,7 @@ local function tick(event)
         composer.gotoScene("scenes.levels", {time = 450, effect = "slideRight"})
       end},
       {"Следующий\nуровень", function ()
-        state.lvl = utils.nextLvl(state.lvl)
+        state.selectNextLvl()
         composer.gotoScene("scenes.loading")
       end}
     )
@@ -489,14 +487,6 @@ local function tick(event)
   -- Поражение
   if prevS.result ~= "lose" and currS.result == "lose" then
     sound.play("lose")
-  end
-
-
-  ----------------
-  -- Сохранение --
-  ----------------
-  if prevS.result ~= "win" and currS.result == "win" then
-    saver.saveLvl(utils.nextLvlIndex(state.lvl))
   end
 end
 

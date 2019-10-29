@@ -8,26 +8,6 @@ function M.rgb(r, g, b, o)
 end
 
 
-function M.nextLvlIndex(lvl)
-  for i, otherLvl in pairs(levels) do
-    if (otherLvl.level == lvl.level) and (otherLvl.name == lvl.name) then
-      if i == #levels then
-        return 1
-      else
-        return i + 1
-      end
-    end
-  end
-
-  return 1
-end
-
-
-function M.nextLvl(lvl)
-  return levels[M.nextLvlIndex(lvl)]
-end
-
-
 function M.deepCopy(obj)
   if type(obj) ~= "table" then
     return obj

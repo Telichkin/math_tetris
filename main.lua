@@ -1,11 +1,11 @@
 local composer = require("composer")
 local inputReader = require("lib.inputReader")
-local saver = require("lib.saver")
+local state = require("lib.state")
 
 display.setStatusBar(display.HiddenStatusBar)
 math.randomseed(os.time())
 composer.recycleOnSceneChange = true 
 inputReader.start()
-saver.start()
+state.start()
 
 composer.gotoScene("scenes.menu")

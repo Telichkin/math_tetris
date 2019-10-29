@@ -8,8 +8,7 @@ local scene = composer.newScene()
 
 
 function scene:create(event)
-  state.lvl.lvlTasks, state.lvl.lvlNumbers = tasks.generate(state.lvl.task, state.lvl.limit)
-  state.lvl.scheme = tasks.generateScheme(state.lvl.tasksN, state.lvl.tasksType)
+  state.initSelectedLvl()
   
   local background = display.newRect(
     self.view, display.contentCenterX, display.contentCenterY, 
@@ -29,7 +28,7 @@ function scene:show(event)
   if event.phase == "will" then
     composer.loadScene("scenes.game", false)
   elseif event.phase == "did" then
-    timer.performWithDelay(540, function()
+    timer.performWithDelay(810, function()
       composer.gotoScene("scenes.game", {time = 500, effect = "crossFade"})
     end)
   end

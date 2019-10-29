@@ -4,7 +4,6 @@ local utils = require("lib.utils")
 local state = require("lib.state")
 local levels = require("lib.levels")
 local sound = require("lib.sound")
-local saver = require("lib.saver")
 
 
 local scene = composer.newScene()
@@ -75,7 +74,7 @@ local function createLvlBtn(lvl, unlocked)
   scrollView:insert(playBtnGroup)
   playBtn:addEventListener("tap", function ()
     if unlocked then
-      state.lvl = lvl
+      state.selectLvl(lvl)
       gotoGame()
     end
     sound.play("tap")
@@ -86,7 +85,6 @@ end
 
 
 function scene:create(event)
-  -- Создание сцены
   local sceneGroup = self.view
 
   scrollView = widget.newScrollView({
@@ -99,9 +97,8 @@ function scene:create(event)
   sceneGroup:insert(scrollView)
 
   createBackBtn()
-  local lastLvlIndex = saver.lastLvlIndex()
   for i, lvl in pairs(levels) do
-    createLvlBtn(lvl, i <= lastLvlIndex)
+    createLvlBtn(lvl, i <= state.lastUnlockedLvlIndex)
   end
 
   scrollView:setScrollHeight(deltaY + (math.ceil(buttonsCount / 2) * 135))
