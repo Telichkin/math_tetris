@@ -493,10 +493,7 @@ end
 
 function scene:show(event)
   if event.phase == "will" then
-    local startT = os.clock()
-    print("startT", startT)
     tick({time = 0})  -- Инициализируем состояние в первом тике
-    print("deltaT", os.clock() - startT)
   elseif event.phase == "did" then
     Runtime:addEventListener("enterFrame", tick)
     timer.performWithDelay(500, function () currS.isVisible = true end)
