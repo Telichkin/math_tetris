@@ -5,6 +5,7 @@ local utils = require("lib.utils")
 local state = require("lib.state")
 local sound = require("lib.sound")
 local inputReader = require("lib.inputReader")
+local images = require("images")
 
 
 ------------------
@@ -142,7 +143,8 @@ local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
   )
   title:setFillColor(utils.rgb(0, 0, 0))
 
-  local persona = display.newImage(modalWindow, "assets/images/" .. personaImg, 0, -30)
+  local persona = display.newSprite(modalWindow, images.sheet, {frames = {images.frameIndex["images/" .. personaImg]}})
+  persona.x, persona.y = 0, -30
   local pW, pH = persona.width, persona.height
   persona.height = modalH * 0.36
   persona.width = persona.height / pH * pW
@@ -194,8 +196,9 @@ local function createBox(b)
   box = display.newGroup()
   gameGroup:insert(box)
   -- У нас 14 разных типа изображений блоков
-  local name = "block-" .. tostring(math.random(14)) .. ".png"
-  local shape = display.newImageRect(box, "assets/images/" .. name, boxWidth, boxHeight)
+  local name = "images/block-" .. tostring(math.random(14))
+  local shape = display.newSprite(box, images.sheet, {frames = {images.frameIndex[name]}})
+  shape.width, shape.height = boxWidth, boxHeight
   
   text = display.newText(box, b.task.text, 0, 0, mainFont, 17)
   text:setFillColor(0, 0, 0)
@@ -212,13 +215,13 @@ local function createLivesGroup()
   livesGroup.x = heartStartX
   mainGroup:insert(livesGroup)
   for i = 1, maxLives do
-    local shape = display.newImageRect(
-      livesGroup,
-      currS.lives >= i and "assets/images/heart_full.png" or "assets/images/heart.png",
-      heartH, heartH
+    local name = currS.lives >= i and "images/heart_full" or "images/heart"
+    local shape = display.newSprite(
+      livesGroup, images.sheet,
+      {frames = {images.frameIndex[name]}}
     )
-    shape.x = ((i - 1) * (heartH + 5))
-    shape.y = 0
+    shape.width, shape.height = heartH, heartH
+    shape.x, shape.y = ((i - 1) * (heartH + 5)), 0
   end
 end
 
@@ -369,8 +372,7 @@ local function tick(event)
   -- Хочет выйти
   if prevS.isPaused == false and currS.isPaused == true then
     createModalWindow(
-      "Хочешь выйти из игры?",
-      "exit.png",
+      "Хочешь выйти из игры?", "exit",
       {"Выйти", function ()
         composer.gotoScene("scenes.levels", {time = 450, effect = "slideRight"})
       end},
@@ -389,8 +391,7 @@ local function tick(event)
   -- Победа
   if prevS.result ~= "win" and currS.result == "win" then
     createModalWindow(
-      "Уровень пройден!", 
-      "win.jpg",
+      "Уровень пройден!", "win",
       {"Меню", function ()
         composer.gotoScene("scenes.levels", {time = 450, effect = "slideRight"})
       end},
@@ -404,8 +405,7 @@ local function tick(event)
   -- Поражение
   if prevS.result ~= "lose" and currS.result == "lose" then
     createModalWindow(
-      "Попробуй ещё раз", 
-      "lose.jpg",
+      "Попробуй ещё раз", "lose",
       {"Меню", function ()
         composer.gotoScene("scenes.levels", {time = 450, effect = "slideRight"})
       end},
@@ -493,7 +493,10 @@ end
 
 function scene:show(event)
   if event.phase == "will" then
+    local startT = os.clock()
+    print("startT", startT)
     tick({time = 0})  -- Инициализируем состояние в первом тике
+    print("deltaT", os.clock() - startT)
   elseif event.phase == "did" then
     Runtime:addEventListener("enterFrame", tick)
     timer.performWithDelay(500, function () currS.isVisible = true end)

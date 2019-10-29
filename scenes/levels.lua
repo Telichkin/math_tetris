@@ -4,6 +4,7 @@ local utils = require("lib.utils")
 local state = require("lib.state")
 local levels = require("lib.levels")
 local sound = require("lib.sound")
+local images = require("images")
 
 
 local scene = composer.newScene()
@@ -47,8 +48,9 @@ end
 
 local function createLvlBtn(lvl, unlocked) 
   local playBtnGroup = display.newGroup()
-  local img = "assets/images/lvl-" .. (unlocked and "unlocked" or "locked") .. ".png"
-  local playBtn = display.newImageRect(playBtnGroup, img, 138, 114)
+  local img = "images/lvl-" .. (unlocked and "unlocked" or "locked")
+  local playBtn = display.newSprite(playBtnGroup, images.sheet, {frames = {images.frameIndex[img]}})
+  playBtn.width, playBtn.height = 138, 114
 
   if unlocked then
     local playBtnTitle = display.newText(playBtnGroup, lvl.name, 0, 0, "assets/Neucha-Regular", 20)
@@ -59,9 +61,10 @@ local function createLvlBtn(lvl, unlocked)
     playBtnSubtitle:setFillColor(utils.rgb(0, 0, 0, 1))  
     playBtnSubtitle.y = 15
   else
-    local lockImg = display.newImage(playBtnGroup, "assets/images/lock-icon.png", 0, 0)
-    lockImg.height = 72
-    lockImg.width = 72
+    local lockImg = display.newSprite(playBtnGroup, images.sheet, {frames = {images.frameIndex["images/lock-icon"]}})
+    local iW, iH = lockImg.width, lockImg.height
+    lockImg.width, lockImg.height = (72 / iH * iW), 72
+    lockImg.x, lockImg.y = -5, -5
   end
 
   if math.fmod((buttonsCount + 1), 2) ~= 0 then  -- Левый блок

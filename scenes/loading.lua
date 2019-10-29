@@ -2,6 +2,7 @@ local composer = require("composer")
 local utils = require("lib.utils")
 local state = require("lib.state")
 local tasks = require("lib.tasks")
+local images = require("images")
 
 
 local scene = composer.newScene()
@@ -16,9 +17,9 @@ function scene:create(event)
   )
   background:setFillColor(utils.rgb(255, 255, 255)) 
 
-  local clock = display.newImageRect(self.view, 'assets/images/clock.png', 54, 140)
-  clock.x = display.contentCenterX
-  clock.y = display.contentCenterY
+  local clock = display.newSprite(self.view, images.sheet, {frames = {images.frameIndex["images/clock"]}})
+  clock.width, clock.height = 54, 140
+  clock.x, clock.y = display.contentCenterX, display.contentCenterY
 
   transition.to(clock, {time = 1500, rotation = 360, delta = true, iterations = -1})
 end
@@ -29,7 +30,7 @@ function scene:show(event)
     composer.loadScene("scenes.game", false)
   elseif event.phase == "did" then
     timer.performWithDelay(810, function()
-      composer.gotoScene("scenes.game", {time = 500, effect = "crossFade"})
+      composer.gotoScene("scenes.game", {time = 600, effect = "crossFade"})
     end)
   end
 end
