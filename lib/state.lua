@@ -9,18 +9,23 @@ local M = {
 }
 
 
-local function nextLvlIndex(lvl)
+local function lvlIndex(lvl)
   for i, otherLvl in pairs(levels) do
     if (otherLvl.level == lvl.level) and (otherLvl.name == lvl.name) then
-      if i == #levels then
-        return 1
-      else
-        return i + 1
-      end
+      return i
     end
   end
-
   return 1
+end
+
+
+local function nextLvlIndex(lvl)
+  local i = lvlIndex(lvl)
+  if i >= #levels then
+    return 1
+  else
+    return i + 1
+  end
 end
 
 
@@ -59,7 +64,7 @@ end
 
 -- Эта функция защищает от случайного выбора заблокированного уровня
 function M.selectLvl(lvl) 
-  local i = (nextLvlIndex(lvl) - 1) or 1
+  local i = lvlIndex(lvl)
   if i <= M.lastUnlockedLvlIndex then
     M.selectedLvl = levels[i]
   end
