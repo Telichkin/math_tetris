@@ -53,10 +53,17 @@ local function createBackBtn()
 
   btnGroup:addEventListener("tap", function ()
     sound.play("tap")
+    scene:handleBackBtn()
+    return true
   end)
 
   footerGroup:insert(btnGroup)
   scene.view:insert(footerGroup)
+end
+
+
+function scene:handleBackBtn()
+  native.requestExit()
 end
 
 

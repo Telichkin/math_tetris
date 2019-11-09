@@ -112,8 +112,9 @@ local function createBackBtn()
   mainGroup:insert(btn)
 
   btn:addEventListener("tap", function ()
-    uiEvent = "Back"
     sound.play("tap")
+    scene:handleBackBtn()
+    return true
   end)
 end
 
@@ -488,6 +489,11 @@ local function tick(event)
   if prevS.result ~= "lose" and currS.result == "lose" then
     sound.play("lose")
   end
+end
+
+
+function scene:handleBackBtn()
+  uiEvent = "Back"
 end
 
 

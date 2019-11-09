@@ -24,6 +24,7 @@ local function createBackBtn()
   footerGroup.x = display.contentCenterX
   footerGroup.y = display.contentCenterY + ((display.actualContentHeight - 45) / 2)
   footerGroup:addEventListener("tap", function () return true end)  -- blocks events propagation
+  footerGroup:addEventListener("touch", function () return true end)  -- blocks events propagation
 
   local bkg = display.newRect(footerGroup, 0, 0, display.actualContentWidth, 45)
   bkg:setFillColor(utils.rgb(50, 97, 215, 0.75))
@@ -37,7 +38,7 @@ local function createBackBtn()
 
   btnGroup:addEventListener("tap", function ()
     sound.play("tap")
-    composer.gotoScene("scenes.menu", {time = 450, effect = "slideRight"})
+    scene:handleBackBtn()
     return true
   end)
 
@@ -84,6 +85,11 @@ local function createLvlBtn(lvl, unlocked)
   end)
 
   buttonsCount = buttonsCount + 1
+end
+
+
+function scene:handleBackBtn()
+  composer.gotoScene("scenes.menu", {time = 450, effect = "slideRight"})
 end
 
 
