@@ -58,7 +58,21 @@ local steps = {
   {
     col = 1,
     task = { type = "number", n = 8, text = "8" },
-    tipY = (fieldH / 2) - (4 * boxHeight),
+    tipY = (fieldH / 2) - (5.5 * boxHeight),
+    tipDone = false,
+  },
+  -- Показываем цель игры
+  {
+    col = 3,
+    task = { type = "number", n = 10, text = "10" },
+    tipY = nil,
+    tipDone = false,
+  },
+  -- Рассказываем про количество жизней
+  {
+    col = 3,
+    task = { type = "number", n = 10, text = "10" },
+    tipY = nil,
     tipDone = false,
   },
   -- Нужно разбить пример 5 + 5 = ?
@@ -174,14 +188,18 @@ local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
   modalWindow.x = display.contentCenterX
   modalWindow.y = modalStartY
 
-  local background = display.newRect(modalWindow, 0, 0, modalW, modalH)
-  background:setFillColor(utils.rgb(255, 255, 255, 1))
-  background.strokeWidth = 4
-  background:setStrokeColor(utils.rgb(149, 175, 237))
+  local mH = modalH
+  if secondaryBtn == nil then
+    mH = mH - 40
+  end
+  local modal = display.newRect(modalWindow, 0, 0, modalW, mH)
+  modal:setFillColor(utils.rgb(255, 255, 255, 1))
+  modal.strokeWidth = 4
+  modal:setStrokeColor(utils.rgb(149, 175, 237))
 
   local title = display.newText(
     modalWindow, titleText,
-    0, -(modalH / 2) + 40,
+    0, -(modal.height / 2) + 40,
     mainFont, 25
   )
   title:setFillColor(utils.rgb(0, 0, 0))
@@ -189,7 +207,7 @@ local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
   local persona
   if personaImg then
     persona = display.newSprite(modalWindow, images.sheet, {frames = {images.frameIndex["images/" .. personaImg]}})
-    persona.x, persona.y = 0, -30
+    persona.x, persona.y = 0, -20
     local pW, pH = persona.width, persona.height
     persona.height = modalH * 0.36
     persona.width = persona.height / pH * pW
@@ -227,7 +245,7 @@ local function createModalWindow(titleText, personaImg, secondaryBtn, mainBtn)
   })
   btnText:setFillColor(utils.rgb(0, 0, 0))
   btnGroup.x = 0
-  btnGroup.y = (modalH / 2) - 50
+  btnGroup.y = (modal.height / 2) - 50
   modalWindow:insert(btnGroup)
   mainGroup:insert(modalWindow)
 
@@ -253,7 +271,13 @@ local function createTipLayer()
   arrow.width = arrow.height / aH * aW
   arrow.x = 0
   arrow.y = activeBoxR.y + (boxHeight / 2) + (arrow.height / 2) + 12
-  if currS.tip == "Swipe Down" then
+  if currS.tip == "Game Goal" then
+    arrow.alpha = 0
+  elseif currS.tip == "Game Lives" then
+    arrow.x = -65
+    arrow.rotation = 60
+    arrow.y = arrow.y + 5
+  elseif currS.tip == "Swipe Down" then
     arrow.rotation = -90
     arrow.y = activeBoxR.y
   elseif currS.tip == "Swipe Up" then
@@ -291,16 +315,21 @@ local function createTipLayer()
       end})
     end})
   end
-  arrowAnimation()
+  if currS.tip ~= "Game Goal" and currS.tip ~= "Game Lives" then
+    arrowAnimation()
+  end
 
   local modal = display.newRect(tipLayer, 0, 0, modalW, 0)
   modal:setFillColor(utils.rgb(255, 255, 255, 1))
   modal.strokeWidth = 4
   modal:setStrokeColor(utils.rgb(149, 175, 237))
-  modal.alpha = 0
 
   local txt = ""
-  if currS.tip == "Swipe Left" then
+  if currS.tip == "Game Goal" then
+    txt = "Цель игры: уничтожить\nстену внизу экрана"
+  elseif currS.tip == "Game Lives" then
+    txt = "Ошибки забирают жизни!\nУ тебя всего 3 жизни"
+  elseif currS.tip == "Swipe Left" then
     txt = "Двигай падающий блок\nтуда, где находится\nподходящая ему пара"
   elseif currS.tip == "Swipe Down" then
     txt = "Можешь увеличить\nскорость падения блока\nдвижением вниз"
@@ -318,18 +347,52 @@ local function createTipLayer()
     align = "center",
   })
   tipText:setFillColor(utils.rgb(0, 0, 0))
+  local okBtn
+  if currS.tip == "Game Goal" or currS.tip == "Game Lives" then
+    okBtn = display.newGroup()
+    local btn = display.newRect(okBtn, 0, 0, modalW * 0.6, 70)
+    btn:setFillColor(utils.rgb(255, 255, 255))
+    btn.strokeWidth = 3
+    btn:setStrokeColor(utils.rgb(56, 102, 204))
+  
+    local btnText = display.newText({
+      parent = okBtn, 
+      text = "Понятно", 
+      x = 0, 
+      y = 0, 
+      font = mainFont, 
+      fontSize = 25,
+      align = "center",
+    })
+    btnText:setFillColor(utils.rgb(0, 0, 0))
+    okBtn.x = 0
+    okBtn.y = 0
+    tipLayer:insert(okBtn)
+  
+    okBtn:addEventListener("tap", function ()
+      sound.play("tap")
+      uiEvent = "OK"
+    end)
+  end
 
-  modal.height = tipText.height + 20 * 2
+  modal.height = tipText.height + (20 * 2) + (okBtn and (70 + 15) or 0)
   modal.y = arrow.y + (arrow.height / 2) + (modal.height / 2) + 10
-  if currS.tip == "Swipe Down" then
+  if currS.tip == "Game Goal" or currS.tip == "Game Lives" then
+    modal.y = -30
+  elseif currS.tip == "Swipe Down" then
     modal.y = activeBoxR.y + arrow.width + (modal.height / 2) + 10
   elseif currS.tip == "Swipe Up" then
     modal.y = activeBoxR.y - arrow.width - (modal.height / 2) - 10
   end
   tipText.y = modal.y
+  if okBtn then
+    okBtn.y = modal.y + (modal.height / 2) - 15 - (okBtn.height / 2)
+    tipText.y = modal.y - (okBtn.height / 2)
+  end
 
+  tipLayer.alpha = 0
   mainGroup:insert(tipLayer)
-  transition.fadeIn(modal, {time = 800})
+  transition.fadeIn(tipLayer, {time = 800})
 end
 
 
@@ -397,20 +460,28 @@ local function tick(event)
     currS.isPaused = false
   end
 
-  if currS.step == 1 and currS.tip == "Swipe Left" and lastEvent == "Swipe Left" then
-    steps[1].tipDone = true
+  if currS.step == 4 and currS.tip == "Game Goal" and uiEvent == "OK" then
+    steps[currS.step].tipDone = true
+    currS.tip = nil
+    currS.step = currS.step + 1
+  elseif currS.step == 5 and currS.tip == "Game Lives" and uiEvent == "OK" then
+    steps[currS.step].tipDone = true
+    currS.tip = nil
+    currS.step = currS.step + 1
+  elseif currS.step == 1 and currS.tip == "Swipe Left" and lastEvent == "Swipe Left" then
+    steps[currS.step].tipDone = true
     currS.tip = nil
     currS.step = currS.step + 1
   elseif currS.step == 2 and currS.tip == "Swipe Down" and lastEvent == "Swipe Down" then
-    steps[2].tipDone = true
+    steps[currS.step].tipDone = true
     currS.tip = nil
   elseif currS.step == 2 and currS.active == nil and last(currS.static[2]) == nil then
     currS.step = currS.step + 1
   elseif currS.step == 3 and currS.tip == "Swipe Up" and lastEvent == "Swipe Up" then
-    steps[3].tipDone = true
+    steps[currS.step].tipDone = true
     currS.tip = nil
     currS.step = currS.step + 1
-  elseif currS.step == 4 and currS.active == nil and last(currS.static[3]) == nil then
+  elseif currS.step == 6 and currS.active == nil and last(currS.static[3]) == nil then
     currS.step = currS.step + 1
   end
 
@@ -505,19 +576,29 @@ local function tick(event)
       end
       
       if currS.active then
-        if steps[currS.step].tipDone == false and currS.tip == nil then
+        if steps[currS.step].tipDone == false and currS.tip == nil and prevS.tip == nil then
+          -- Активировать подсказку про цель игры
+          if currS.step == 4 and not tipLayer and currS.active.task.n == steps[currS.step].task.n then
+            currS.tip = "Game Goal"
+          end
+
+          -- Активировать подсказку про количество жизней
+          if currS.step == 5 and not tipLayer then
+            currS.tip = "Game Lives"
+          end
+
           -- Активировать подсказку про свайп влево
-          if currS.step == 1 and currS.active.y >= steps[1].tipY then
+          if currS.step == 1 and currS.active.y >= steps[currS.step].tipY then
             currS.tip = "Swipe Left"
           end
 
           -- Активировать подсказку про свайп вниз
-          if currS.step == 2 and currS.active.y >= steps[2].tipY then
+          if currS.step == 2 and currS.active.y >= steps[currS.step].tipY then
             currS.tip = "Swipe Down"
           end
 
           -- Активировать подсказку про свайп вверх
-          if currS.step == 3 and currS.active.y >= steps[3].tipY then
+          if currS.step == 3 and currS.active.y >= steps[currS.step].tipY then
             currS.tip = "Swipe Up"
           end
         end
@@ -569,6 +650,7 @@ local function tick(event)
       end
       transition.cancel(arrow)
       display.remove(tipLayer)
+      tipLayer = nil
     end})
   end
 
@@ -707,6 +789,10 @@ end
 function scene:hide(event) 
   if event.phase == "will" then
     Runtime:removeEventListener("enterFrame", tick)
+    if arrowTimer then
+      timer.cancel(arrowTimer)
+    end
+    transition.cancel(arrow)
     composer.removeScene("scenes.game")
   end
 end
